@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>H–I Vizsgaszimulátor v4.0 (844 Kérdés, 40 Sorsolt Kérdés)</title>
+<style>
+  :root { --bg:#0b1220; --card:#0f172a; --text:#e5e7eb; --muted:#94a3b8; --accent:#22c55e; --danger:#ef4444; --brand:#38bdf8; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:linear-gradient(180deg,#0b1220,#111827); color:var(--text);}
+  .container { max-width:1000px; margin:0 auto; padding:24px 16px 60px; }
+  .card { background:rgba(17,24,39,.9); border:1px solid rgba(148,163,184,.15); border-radius:16px; padding:24px; margin-top:16px; box-shadow:0 10px 30px rgba(0,0,0,.35);}
+  h1 { margin:8px 0 4px; font-size:28px;}
+  .muted { color:var(--muted); font-size:0.9em; }
+  .action-bar { display:flex; gap:10px; margin-top:20px; flex-wrap:wrap; }
+  .action-bar button { padding:10px 18px; border:none; border-radius:8px; font-weight:600; cursor:pointer; transition:background-color 0.2s; }
+  .action-bar button.primary { background-color:var(--brand); color:var(--text); }
+  .action-bar button.secondary { background-color:var(--card); color:var(--text); border:1px solid var(--muted); }
+  .action-bar button:hover { opacity:0.85; }
+  
+  .q-block { margin-top:24px; padding:20px; border-radius:12px; border:1px solid rgba(148,163,184,.15); background-color:var(--card); }
+  .q-head { font-weight:600; font-size:1.1em; display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
+  .q-text { flex-grow:1; margin-right:15px; }
+  .pill { background-color:var(--brand); color:var(--text); padding:4px 8px; border-radius:10px; font-size:0.8em; font-weight:600; white-space:nowrap; }
+  
+  .answer-option { padding:10px; border-radius:8px; margin-bottom:8px; cursor:pointer; transition:background-color 0.15s; border:1px solid var(--muted); background-color:var(--bg); display:flex; align-items:center; }
+  .answer-option:hover { background-color:rgba(255,255,255,0.05); }
+  .answer-option.selected { background-color:rgba(56, 189, 248, 0.2); border-color:var(--brand); }
+  .answer-option.correct { background-color:rgba(34, 197, 94, 0.3); border-color:var(--accent); }
+  .answer-option.incorrect { background-color:rgba(239, 68, 68, 0.3); border-color:var(--danger); }
+  .answer-option.incorrect .letter { background-color:var(--danger); }
+  .answer-option.correct .letter { background-color:var(--accent); }
+
+  .letter { display:inline-block; width:24px; height:24px; line-height:24px; text-align:center; border-radius:4px; margin-right:10px; background-color:var(--muted); color:var(--bg); font-weight:bold; }
+  .answer-option.selected .letter { background-color:var(--brand); color:var(--text); }
+
+  .result-box { text-align:center; padding:20px; border-radius:12px; margin-top:20px; font-size:1.2em; font-weight:600; }
+  .result-box.pass { background-color:rgba(34, 197, 94, 0.15); color:var(--accent); }
+  .result-box.fail { background-color:rgba(239, 68, 68, 0.15); color:var(--danger); }
+
+  #review .question-block { border:1px solid var(--muted); padding:15px; border-radius:8px; margin-bottom:15px; background-color:var(--card); }
+  #review .qhead { display:flex; justify-content:space-between; align-items:flex-start; font-weight:600; margin-bottom:5px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>H–I Vizsgaszimulátor v4.0 </h1>
+  <div class="muted">**844** kérdéses adatbázisból **40 kérdést** sorsol. (Szükséges helyes válasz: 32)</div>
+
+  <div class="action-bar">
+    <button id="start-exam" class="primary">Indítás (Vizsgamód)</button>
+    <button id="start-learn" class="secondary">Gyakorló mód (Összes kérdés)</button>
+    <button id="show-review" class="secondary" style="display:none;">Értékelés / Helyes válaszok</button>
+  </div>
+
+  <div id="quiz-area"></div>
+  <div id="results" class="card" style="display:none;">
+    <h2>Eredmény</h2>
+    <div id="result-text" class="result-box"></div>
+    <div id="score-details" class="muted" style="margin-top:10px;"></div>
+  </div>
+  
+  <div id="review-area" class="card" style="display:none;">
+    <h2>Részletes áttekintés</h2>
+    <div id="review"></div>
+  </div>
+</div>
+
+<script>
+// --- 1. A KÉRDÉSEK TELJES ADATBÁZISA (844 KÉRDÉS, KATEGÓRIÁVAL) ---
+// Ez a tömb tartalmazza a teljes, feldolgozott kérdéskészletet.
+// A topic mező automatikusan ki van töltve a felhasználó kérése szerint.
+const allQuestions = [
+  {"question": "Hogyan lehet F-GÁZ képzésre jelentkezni?", "correct_answer": "A természetes személyi regisztrációt követően a Klímagáz adatbázisban lehet jelentkezni.", "topic": ""}
+{"question": "Kell-e nyilvántartást vezetnie az F-ÜHG-k típusonkénti és fajtánkénti mennyiségéről a nem képesített vállalkozásoknak?", "correct_answer": "Nem.", "topic": ""}
+{"question": "Mely esetekben regenerálható egy hűtőközeg?", "correct_answer": "Amennyiben a lefejtés során csak egy típusú hűtőközeg került a palackba.", "topic": ""}
+{"question": "Melyek a magas GWP értékű FÜHG-k helyettesítésére használatos hűtőközegek?", "correct_answer": "R744 (széndioxid, CO2) R717 (ammónia, NH3 ) R32 (alacsony GWP értékű HFC) R290 (propán), R1270 (propén, propylén) és R600a (izobután).", "topic": ""}
+{"question": "Mi az SZ lap használatának célja?", "correct_answer": "Az, hogy megfelelő információk álljanak rendelkezésre a hulladék átadójáról (termelő), átvevőjéről (kezelő) és szállítójáról. Továbbá, megfelelő információnk legyen a veszélyes hulladék tulajdonságairól, mennyiségéről, valamint a szállítás módjáról.", "topic": ""}
+{"question": "Milyen berendezéseknél és meddig használhatók a regenerált hűtőközegek meglévő berendezések javítására és karbantartására, abban az esetben, amikor a gyári új hűtőköezegek magas GWP értékük miatt már tiltottá válnak?", "correct_answer": "Légkondícionálók, hőszivattyúk esetén 2500 feletti GWP értékű hűtőkzeg töltettel: 2026-ig. Hűtőberendezések esetén: 2500 GWP felett 2030-ig, 750 GWP felett 2032-ig.", "topic": ""}
+{"question": "Milyen kötelezettséget ír elő az 2024/573/EU rendelet a visszanyert hűtőközegeket illetően?", "correct_answer": "A berendezések – ideértve a mobil berendezéseket is – üzemeltetőinek vissza kell nyerniük a hűtőközegeket képesített szakemberek által. A visszanyert anyagokat újrahasznosítani, regenerálni, vagy ártalmatlanítani kell.", "topic": ""}
+{"question": "Milyen követelményt ír elő az AHRI 700 szabvány a nemkondenzálódó gáztartalomra vonatkozóan?", "correct_answer": "A hűtőközeg nem kondenzálódó gáztartalma maximum 1,5% lehet.", "topic": ""}
+{"question": "Milyen paraméterekkel rendelkező vákuumszivattyúra van szüksége a képesített cégeknek?", "correct_answer": "A vákuumolandó hűtőberendezés nagyságához megfelelő teljesítményű, legalább 0,05 mbar abszolút nyomás előállítására alkalmas kétfokozatú vákuumszivattyúra van szükség.", "topic": ""}
+{"question": "Mit jelent a KTJ szám?", "correct_answer": "A KTJ szám a hulladék keletkezés pontos helyét határozza meg.", "topic": ""}
+{"question": "Szükséges-e cégszerű aláírással ellátni a Hatóság részére beküldendő megfelelési nyilatkozatot?", "correct_answer": "Igen, a Megfelelési nyilatkozatot cégszerű aláírással kell ellátni.", "topic": ""}
+{"question": "Alacsony szívóoldali nyomás – fagyos szívóág mitől alakulhat ki?", "correct_answer": "Az elpárologtató hőcserélő eljegesedett; az elpárologtató levegőáram lecsökkent (szennyeződés, lecsökkent belépő keresztmetszet); elpárologtató ventilátor hiba (ékszíj, motor)", "topic": ""}
+{"question": "Mi a teendő, ha egy hűtőkörből CFC vagy HCFC hűtőközeget fejtünk le?", "correct_answer": "A felhasználásuk tiltása miatt ártalmatlanítani kell a lefejtett hűtőközeget.", "topic": ""}
+{"question": "Milyen követelményt ír elő az AHRI 700 szabvány a gyári új hűtőközeg tisztaságára vonatkozóan?", "correct_answer": "A hűtőközeg tisztaságnak min. 99,5 %-nak kell lenni.", "topic": ""}
+{"question": "Szükséges-e rögzíteni a Klímagáz adatbázisban a vásárolt, felhasznált, értékesített F-ÜHG-k típusonkénti és fajtánkénti mennyiségéről vezetett nyilvántartás adatait?", "correct_answer": "Igen, szükséges.", "topic": ""}
+{"question": "Mennyi időn belül kell bejelentenie a berendezés tulajdonosának/üzemeltetőjének a Hatóság felé a szivárgásészlelést?", "correct_answer": "A szivárgásészlelés tényéről a szivárgást észlelő képesített vállalkozás képesített alkalmazottja a a Klímagáz adatbázisban kitöltött szivárgásészlelési jegyzőkönyv 8 napon belüli kitöltésével értesíti a Hatóságot.", "topic": ""}
+{"question": "A hűtőberendezés milyen állapotát célszerű kihasználni a hűtőközeg betöltésénél?", "correct_answer": "Vákuumolt.", "topic": ""}
+{"question": "A Klímagáz adatbázisban melyik menüpontban kell rögzíteni a vásárolt, felhasznált, értékesített F-ÜHG-k típusonkénti és fajtánkénti mennyiségéről vezetett nyilvántartás adatait?", "correct_answer": "A \"Berendezések/F-ÜHG raktár” menüpontban kell rögzíteni.", "topic": ""}
+{"question": "A maximális hűtőközeg töltetmennyiség meghatározásának feltételei (MSz EN 378 sz. szabvány szerint)?", "correct_answer": "A töltetkorlátot meghatározza: - a legmagasabb koncentráció szintje egy elárasztott térben, ami nem eredményez menekülést akadályozó hatást. - Gyúlékonyság szempontjából az adott térben kialakuló gyúlékonysági koncentráció 20%-a - A berendezés helye, pl.: föld alatt-felett, a hűtött térben, gépházban stb. - A hűtött térben levő személyek száma és kiképzettsége. - a rendszer típusa: közvetlen elpárologtatású vagy közvetett hűtés.", "topic": ""}
+{"question": "A palackot csak abban esetben szabad használni,", "correct_answer": "amennyiben rendelkezik érvényes hatósági vizsgával.", "topic": ""}
+{"question": "A szivárgásvizsgálatra kötelezett berendezések Klímagáz adatbázisban való felvitelük során a berendezések műszaki adatait kinek kell feltölteni?", "correct_answer": "A berendezés jegyzőkönyvezésével megbízott képesített vállalkozás képesített alkalmazottjának kell feltöltenie.", "topic": ""}
+{"question": "A vonatkozó szabvány előírása értelmében vákuumozáskor mekkora abszolút nyomás maradhat a hűtőberendezésben és hol kell ezt mérni?", "correct_answer": "A maradó abszolút nyomás max. értéke 270 Pa lehet és értékét a hűtőberendezésnek a vákuumszivattyú szívócsonkjától legtávolabbi pontján kell mérni.", "topic": ""}
+{"question": "Egy zeotróp keverék összetétele és fizikai tulajdonsága feltétlenül megváltozik-e minden esetben, szivárgás esetén?", "correct_answer": "Azoknak a keverékeknek az összetétele csak kis mértékben változik meg, amelyek közel azonos tulajdonságú anyagokból állnak és nagyon alacsony hőmérsékletcsúszással rendelkeznek. Gőzfázisú szivárgás után egyszerű rátöltéssel helyreállítható az egyensúlyi állapot. Pl: R-404A, R-410A", "topic": ""}
+{"question": "A PAO, PAG és POE olajok közül melyik a leghigroszkóposabb?", "correct_answer": "POE", "topic": ""}
+{"question": "Ahhoz, hogy egy hulladék a tulajdonostól elszállításra kerülhessen milyen azonosítóval kell rendelkeznie?", "correct_answer": "Környezetvédelmi Ügyfél Jellel (KÜJ szám).", "topic": ""}
+{"question": "Alacsony szívóoldali nyomás – száraz szívóág mitől alakulhat ki?", "correct_answer": "Alacsony hűtőközegtöltet, eltömődött adagolószelep-szűrő, elzáródott folyadékág, eltömődött szárító-szűrő elem, adagoló szelep hiba. Elfagyott adagoló szelep, ETV, vagy modulációs szelep részlegesen zárt állapotban, Meghibásodott nyomásjeladók.", "topic": ""}
+{"question": "Az Adatbázisban regisztrált vállalkozás egyúttal rögtön képesített vállalkozásnak is minősül-e?", "correct_answer": "Nem.", "topic": ""}
+{"question": "Az egyes hűtőközegek üvegházhatást növelő képességének mérőszáma a...", "correct_answer": "GWP érték.", "topic": ""}
+{"question": "Az elvégzett szivárgásvizsgálat mikorrtól minősül érvényesnek?", "correct_answer": "A tevékenység akkor minősül elvégzettnek, amikor az elektronikus jegyzőkönyvet az Adatbázisban rögzítik.", "topic": ""}
+{"question": "Az elvégzett szivárgásvizsgálatról készült jegyzőkönyvet melyik menüpontba kell rögzíteni a Klímagáz adatbázisba?", "correct_answer": "A berendezés szivárgásvizsgálatával megbízott képesített vállalkozás képesített alkalmazottja a „Berendezések/Szerződött berendezések” menüpontba az adott berendezéshez kell rögzíteni.", "topic": ""}
+{"question": "Az MSz EN-378-1 sz. szabvány melyik része ad konkrét előírásokat a RAC (Refrigeration and Air Conditioning) telepítésére vonatkozóan?", "correct_answer": "A RAC telepítésére vonatkozóan az MSz EN-378-1 sz. szabvány, valamint a 378-3 sz. szabvány ad konkrét előírásokat.", "topic": ""}
+{"question": "Az R-600a (izobután) hűtőközeg esetén kell-e a felhasználást rögzíteni a Klímagáz adatbázisban?", "correct_answer": "Igen.", "topic": ""}
+{"question": "Egy jól méretezett hűtőrendszerben hogyan állapítjuk meg, hogy megfelelő-e a kompresszor működése?", "correct_answer": "Ellenőrzött körülmények között el kell tudni érnünk, hogy elérje a biztonsági magas nyomáskapcsoló maximális értékét a nyomóoldal. A szívó oldal zárásával pedig le kell tudnia szívni vákuumba.", "topic": ""}
+{"question": "Elektronikus expanziós szeleppel szerelt rendszernél kell-e szelepet cserélni hűtőközegváltás (retrofit) esetén?", "correct_answer": "Nem kell. Alternatív válasz: .", "topic": ""}
+{"question": "Expanziós szelep beállítását milyen üzemmódban kell elvégezni?", "correct_answer": "Hűtés.", "topic": ""}
+{"question": "A folyadék tartály feladata, hogy …", "correct_answer": "kizárólag folyadék áramolhasson tovább az expanziós szelep felé.", "topic": ""}
+{"question": "Higroszkópos anyag fogalma:", "correct_answer": "Szilárd vagy folyékony anyag levegőn állva annak nedvességtartalmát megköti, ezáltal felhígul.", "topic": ""}
+{"question": "Hogyan kell a hűtőközeget betölteni adagolószelepes hűtőrendszerbe?", "correct_answer": "A hűtőközeg betöltése a berendezés indítása előtt a kondenzátor után, a nagynyomású folyadékvezetékbe beépített folyadékgyűjtő tartályba történik, így a betöltés a lehető leggyorsabb és legbiztonságosabb.", "topic": ""}
+{"question": "Hogyan kell rögzítenie egy kereskedőnek a Klímagáz adatbázisban a (kivételi körbe nem tartozó) klímagázzal előtöltött készülékek mennyiségéről vezetett nyilvántartásban egy új típusú berendezést?", "correct_answer": "A „Berendezések/Előtöltött berendezések” menüpontban az „Új berendezés” gomb segítségével kell rögzíteni.", "topic": ""}
+{"question": "Hogyan kell számolni egy keverék GWP-jét?", "correct_answer": "Az alkotóelemek GWP-jével kell szorozni az alkotóelemek arányát. Σ GWP = (X anyag %* GWP) + (Y anyag % * GWP) + (N anyag % * GWP) …", "topic": ""}
+{"question": "Hogyan lehet ellenőrizni, hogy az adagoló szerv csak tisztán folyadék halmazállapotú hűtőközeget kap-e?", "correct_answer": "Közvetlenül az adagoló szerv elé a folyadékvezetékbe beépített nézőüvegen látható.", "topic": ""}
+{"question": "Hogyan lehet ellenőrizni, hogy egy hűtőrendszer túltöltött-e hűtőközeggel?", "correct_answer": "Normál viszonyok esetén is jelentősen növekedik a kondenzációs nyomás, mert a felesleges mennyiség a kondenzátorban tárolódik és csökkenti a kondenzátor hasznos felületét.", "topic": ""}
+{"question": "Hogyan számoljuk például az R-410A hűtőközeg GWP-jét? R-410A = 50% HFC-32 + 50% HFC-125 HFC-32 GWP: 675 HFC-125 GWP: 3500", "correct_answer": "0,5*675+0,5*3500=2087,5", "topic": ""}
+{"question": "Hogyan számoljuk például az R-507A hűtőközeg GWP-jét? R-507A = 50% HFC-125 + 50% HFC143a HFC-125 GWP:3500 HFC-143a GWP: 4470", "correct_answer": "0,5*3500 + 0,5*4470", "topic": ""}
+{"question": "Hogyan tároljuk a lefejtet, használt kompresszoroljat", "correct_answer": "Biztonsági szeleppel vagy kissé meglazított záródugóval ellátott tartályban tároljuk, hogy ne tudjon túlnyomás kialakulni.", "topic": ""}
+{"question": "Hogyan tölthetjük be az azeotróp elegyeket / blendeket?", "correct_answer": "Folyadék és gőz halmazállapotban is.", "topic": ""}
+{"question": "Hogyan tudjuk ellenőrizni pontosan a hűtőközeg mennyiségét a hűtőkörben?", "correct_answer": "A rendszerből le kell fejteni a hűtőközeget, majd mérleggel ellenőrizni kell, hogy a gyártó / tervező által megadott megfelelő hűtőközeg mennyiséget tartalmazza-e a hűtőkör.", "topic": ""}
+{"question": "Hol találhatók a már tiltott, vagy tiltásra kerülő termékek és berendezések forgalombahozatalának tilalmi listái?", "correct_answer": "Fluorozott közegek esetén: Az 2024/573 EU rendelet IV. számú mellékletében. Ózonbontó anyagok esetén a 2024/590 Eu rendelet mellékleteiben.", "topic": ""}
+{"question": "Ismertesse az alternatív hűtőközegek biztonsági besorolását az MSz EN 378 sz. szabvány szerint!", "correct_answer": "Gyúlékonyság szempontjából: HFO-k, R-717: \"2L\"-es (közepes); HC-k: \"3\"-as (magas). Mérgezőség szempontjából: R-744: \"A\" (nem mérgező). R-717: \"B\" (mérgező). Üzemi nyomás sempontjából: R-744: magas.", "topic": ""}
+{"question": "Ismertesse az R-32 hűtőközeg tulajdonságait.", "correct_answer": "Az R-32 alacsony gyúlékonyságú HFC. Nyomásértékei hasonlóak az R-410-hez. Gyúlékonysága miatt töltetkorlátozással használják klímákban, hőszivattyúkban, folyadékhűtőkben. Az éghetősége miatt szikravédett elektromos szerelvényeket használnak.", "topic": ""}
+{"question": "Ismertesse az R-717 hűtőközeg tulajdonságait!", "correct_answer": "Mérgező. Erősen szúrós szagú gáz. Rézzel és réz tartalmú ötvözetekkel nem összeférhető. Az olajat nem oldja. Mindezek miatt csak szigorú előírások betartásával használható. Nagyteljesítményű ipari hűtőknél manapság is gyakran használják. HFC hűtőközeg retrofitjára szóba sem jöhet.", "topic": ""}
+{"question": "Kell-e éves klímavédelmi felügyeleti díjat fizetnie a Szolgáltatás közvetítői kategóriába regisztrálóknak.", "correct_answer": "Nem.", "topic": ""}
+{"question": "Kérjük válassza ki a retrofitként alkalmazható alternatív hűtőközegeket!", "correct_answer": "R-1234ze, R-1234yf", "topic": ""}
+{"question": "Ki és mikor tölti ki a telepítési tanúsítványt?", "correct_answer": "A telepítő (képesített személy) a telepítéskor.", "topic": ""}
+{"question": "Ki rögzíti az Adatbázisba az elvégzett szivárgásvizsgálatról készült jegyzőkönyvet?", "correct_answer": "A berendezés szivárgásvizsgálatával megbízott képesített vállalkozás képesített alkalmazottja.", "topic": ""}
+{"question": "Kik a hulladékkezelés folyamatának résztvevői?", "correct_answer": "Hulladéktermelő, -szállító, -kezelő.", "topic": ""}
+{"question": "Kinek kell kvótát kérni az EU-tól?", "correct_answer": "A 2024/573 EU rendelet alapján azon vállakozásokank kell kvótát kérni az EU-tól, akik bármekkora mennyiségben először hoznak forgalomba ömlesztett HFC-t (fluorozott szénhidrogént) az EU piacán (azaz EU-n kívülről importáltak, vagy EU-ban gyártottak).", "topic": ""}
+{"question": "Kiszabható-e klímavédelmi bírság a regisztrációs kötelezettség megszegése esetén?", "correct_answer": "igen", "topic": ""}
+{"question": "Kondenzátoroknál mi a mikrocsöves alumínium kialakítás előnye és hátránya a rézcsöves + alumínium lamelláshoz képest?", "correct_answer": "Előnye a nagyobb hatásfok, hátránya, hogy nem javítható és a réz-alumínium átmenet is meghibásodás forrása lehet.", "topic": ""}
+{"question": "Kondenzátoroknál mi a rézcsöves + alumínium lamellás kialakítás előnye és hátránya a mikrocsöves alumíniumhoz képest?", "correct_answer": "Előnye a javíthatóság, hátrány a kisebb hatásfok.", "topic": ""}
+{"question": "Lehet-e, és milyen módon berendezést törölni az adatbázisból?", "correct_answer": "A Klímagáz adatbázisból berendezés az ügyfél által nem törölhető. Amennyiben képesített személy lefejti a készülékben található gázt, és 0 kg töltetet jelez a Klímagáz adatbázis, úgy a berendezés üzemen kívül helyezhető. Ezt követően a berendezésben található töltet tömege alapján nem kell felügyeleti díjat fizetni. Véglegesen a Nemzeti Klímavédelmi Hatóság cégszerűen aláírt ügyféli kérelemre törli a berendezést.", "topic": ""}
+{"question": "Lehetséges-e a Klímagáz adatbázisban rögzített a vásárolt, felhasznált, értékesített F-ÜHG-k típusonkénti és fajtánkénti mennyiségéről vezetett nyilvántartás adatainál a saját telephelyek közötti mozgást rögzíteni?", "correct_answer": "Igen, a „Berendezések/F-ÜHG raktár” menüpontban a „Telephelyek közötti mozgás” gomb segítségével.", "topic": ""}
+{"question": "A Klímagáz adatbázis melyik menüpontjában leheta a vásárolt, felhasznált, értékesített F-ÜHG-k típusonkénti és fajtánkénti mennyiségéről vezetett nyilvántartás adatait áttekinteni?", "correct_answer": "Az „F-ÜHG raktár” menüpontban az adott klímagázt kiválasztva a „Előzmények” gomb segítségével.", "topic": ""}
+{"question": "Lehetséges-e javítani a Klímagáz adatbázis forgalmazói felületén a klímagázzal előtöltött készülékek mennyiségéről vezetett nyilvántartásban a tévesen rögzített készüléktípus-adatokat?", "correct_answer": "Igen, a „Berendezések/Előtöltött berendezések” menüpontban az adott berendezésnél a „Módosítás” gomb segítségével.", "topic": ""}
+{"question": "Lehetséges-e javítani a Klímagáz adatbázis forgalmazói felületén klímagázzal előtöltött készülékek mennyiségéről vezetett nyilvántartásban a tévesen rögzített mennyiséget?", "correct_answer": "Igen, a „Berendezések/Előtöltött berendezések” menüben az adott berendezésnél a „Készletváltozás” gomb „Leltár” menüpont, vagy az \"Előzmények\" menüpontban a \"Törlés\" gomb segítségével.", "topic": ""}
+{"question": "Lehetséges-e javítani a Klímagáz adatbázis forgalmazói felületén klímagázzal előtöltött készülékek mennyiségéről vezetett nyilvántartásban a tévesen rögzített készletváltozást?", "correct_answer": "Igen, a „Berendezések/F-ÜHG raktár” menüpontban az adott klímagáz fajtánál a „Készletváltozás” gomb „Leltár” menüpont segítségével, vagy az \"Előzmények\" menüpontban a \"Törlés\" gombbal.", "topic": ""}
+{"question": "Magas szívóoldali nyomás – fagyos szívóág mitől alakulhat ki?", "correct_answer": "Az adagoló szelep kapilláris hőmérséklet érzékelője nem érintkezik megfelelően, az adagolószelep túlzottan nyitva van, hőcserélő folyadékága átereszt a szívóoldal felé (hőcserélő belső hiba).", "topic": ""}
+{"question": "Magas szívóoldali nyomás – száraz szívóág mitől alakulhat ki?", "correct_answer": "3-ágú szelep átereszt a szívóoldal felé; A kondenzátor egység „bypass” egyirányú szelep átereszt; A kompresszor nyomóoldali szelepe átereszt; Kompresszor dugattyú vagy/és henger kopott; A kompresszor szívóoldali szelepe átereszt; Forró gáz egyirányú szelep átereszt; Alacsony kompresszor fordulatszám.", "topic": ""}
+{"question": "Meddig lehet tölteni a lefejtésre használt hűtőközeg palackot?", "correct_answer": "Az eredeti töltet 80%-ára tölthető a palack.", "topic": ""}
+{"question": "Megfelelő F-gáz vizsgával javíthatok-e gépjárművet?", "correct_answer": "Forgalomban résztvevő járművet, kizárólag gépjármű fenntartói engedéllyel rendelkező vállalkozás, szakirányú képzettséggel rendelkező szakembere végezhet a gépjármű fenntartói engedélyben szereplő és képzettségi szintjének megfelelő mértékig, amiért felelősséggel tartozik.", "topic": ""}
+{"question": "Mekkora a tömörségi próbanyomás?", "correct_answer": "Az MSz EN-378 sz. szabvány szerint legalább az adott hűtőközeg várható legnagyobb, azaz \"méretezési\" hőmérsékletéhez tartozó telítési nyomása kell hogy legyen.", "topic": ""}
+{"question": "Mekkora az összeszerelt hűtőberendezésre vonatkozó szilárdsági nyomás és ki hajtja végre a nyomáspróbát?", "correct_answer": "Az MSz EN-378-2 sz. szabványban megadott érték és a képesített szerelő hajtja végre a nyomáspróbát.", "topic": ""}
+{"question": "Mely berendezések tartoznak szivárgásvizsgálati kötelezettség alá?", "correct_answer": "Az EU F-gáz rendleet I. mellékletben felsorolt F-gázokat (magas GWP-jűek) minimum 5 tonna CO2-egyenértéknek megfelelő mennyiségben vagy a II. melléklet 1. szakaszában (főleg HFO-k) felsorolt F-gázokból legalább 1 kg-ot tartalmazó berendezések. Ha berendezés hermetikusan zárt akkor szivárgásvizsgálatot az I. melléklet szerinti gázokkal működő berendezéseknél csak 10 tonna CO2-egyenértéknél felett, míg a II. melléklet szerinti gázok (HFO) esetén 2 kg felett kell elvégezni. A lakóépületekbe telepített hermetikusan zárt berendezések esetében a berendezést nem kell szivárgásvizsgálatnak alávetni, ha a berendezés 3 kg-nál kevesebb fluortartalmú üvegházhatású gázt tartalmaz, feltéve, hogy hermetikusan lezártként van címkézve.", "topic": ""}
+{"question": "Mely esetekben alkalmazhatóak a HC (szénhidrogén, angolul: hydrocarbon) hűtőközegek retrofit hűtőözegként?", "correct_answer": "Rendkívül gyúlékonyak, ezért nem HC hűtőközegek retrofitként nem alkalmazhatók, csak kimondottan erre tervezett rendszerekben, ott is csak töltethatár korlátozással. Az R-290 és R-1270 hasonló nyomásokkal rendelkezik mint az R-404a. Az R-600a -t csak háztartási hűtőgépszerű berendezésekben használják", "topic": ""}
+{"question": "Melyek a léghűtők legismertebb leolvasztási módszerei?", "correct_answer": "Leolvasztás - a hűtött tér levegőjével, - meleggázzal, - villamos fűtéssel, - folyadékkal.", "topic": ""}
+{"question": "Melyek a villamos mérések alapvető biztonságtechnikai követelményei?", "correct_answer": "1. A mérést végző személy ismerje a berendezés fizikai működését 2. Ismerje és használja a vonatkozó villamos kapcsolási rajzot 3. Betartsa a feszültség alatti munkavégzés előírásait", "topic": ""}
+{"question": "Melyik menüpontban kell rögzíteni a Klímagáz adatbázisban a klímagázzal előtöltött készüléket típusonkénti és fajtánkénti mennyiségéről vezetett nyilvántartás adatait?", "correct_answer": "A „Berendezések/Előtöltött berendezések” menüpontban kell rögzíteni.", "topic": ""}
+{"question": "Melyik szintetikus olaj alig higroszkópos?", "correct_answer": "PAO", "topic": ""}
+{"question": "Mennyi időn belül kell a a klímagázokkal kapcsolatos tevékenységek végzésének feltételeiről szóló 458/2024. (XII. 30.) Korm. rendelet előírt jelentéstételi kötelezettséget teljesíteni a Klímagáz adatbázisban?", "correct_answer": "Nyolc nap.", "topic": ""}
+{"question": "Mi a globális felmelegedés mérőszáma?", "correct_answer": "A globális felmelegedés mérőszáma a GWP. GWP=1 jelenti 1 kg CO2 (szén-dioxid) felmelegítő hatását.", "topic": ""}
+{"question": "Mi a hiszterézis?", "correct_answer": "A kimenet, késleltetve reagál a bemenet változására, a bemenet előzményeit is figyelembe véve.", "topic": ""}
+{"question": "Mi a különbség az ORLA-k és az F-ÜHG-k között?", "correct_answer": "Az ORLA anyagok az ózonréteget is károsítják, klór is található bennük. Az F-ÜHG anyagok az ózonréteget nem károsítják, viszont üvegházhatásúak. Utóbbiak klór atomokat nem tartalmaznak (csak fluor, szén és hidrogén atomokból álló vegyületek).", "topic": ""}
+{"question": "Mi a próbaüzem?", "correct_answer": "A próbaüzem arra szolgál, hogy egy berendezést (pl. hűtőberendezést) a rendeltetésszerű terheléssel üzemeltetve kipróbáljunk.", "topic": ""}
+{"question": "Milyen további felhasználási, használati lehetőségei vannak a visszanyert/lefejtett F-gázoknak?", "correct_answer": "Minőségüktől függően vagy ugyanabban a hűtőkörben ahonnan lefejtésre került még újrafelhasználható, vagy regenerálásra eladható / átadható, vagy amennyiben már jogszabály tiltja a használatát, vagy rossz minőségű, abban az esetben ártalmatlanítani szükséges.", "topic": ""}
+{"question": "Mi a teendő, ha rossz képesítési kategóriát vettem fel?", "correct_answer": "A képesítésre jelentkezés visszavonása gomb használatával vagy már érvényes cégképesítési kategória esetén a személyre szabott ügyintézési felületen keresztül cégkapus/ügyfélkapus ügyintézéssel szükséges törlés iránti kérelmet benyújtani.", "topic": ""}
+{"question": "Mi a Termodinamika II. főtétele?", "correct_answer": "A hőenergia mindig a magasabb hőmérsékletű helyről az alacsonyabb hőmérsékletű felé áramlik.", "topic": ""}
+{"question": "Mi a vákuumtartási próba?", "correct_answer": "Az előírt abszolút nyomásra levákuumolt hűtőberendezést ledugózzuk és célszerűen pl. 16…24 órán keresztül figyeljük, hogy emelkedik-e a nyomás.", "topic": ""}
+{"question": "Mi alapján sorolják be a keletkező hulladékokat Magyarországon?", "correct_answer": "Magyarországon az Európai Hulladék Katalógus (EWC) alapján sorolják be a keletkező hulladékokat.", "topic": ""}
+{"question": "Mi az értékesítő feladata a telepítési tanúsítvánnyal kapcsolatosan?", "correct_answer": "Semmi. Az értékesítő csak vásárlói nyilatkozat birtokában adhatja el az előtöltött berendezést a vevőnek.", "topic": ""}
+{"question": "Mi az olaj feladata a hűtési körben?", "correct_answer": "Ken, tömít, hűt.", "topic": ""}
+{"question": "Mi az üzempróba?", "correct_answer": "Az üzempróba a hűtőberendezés és a hozzá kapcsolódó külső rendszerek (pl. hűtővíz-rendszer, hűtöttvíz-rendszer, hűtött levegő-rendszer) működőképességének ellenőrzésére szolgál.", "topic": ""}
+{"question": "Mi befolyásolja a retrofit hűtőközeg kiválasztását?", "correct_answer": "A környezetvédelmi, műszaki, életvédelmi és biztonságtechnikai szempontok összessége.", "topic": ""}
+{"question": "Mi a szívóoldali nyomásszabályozó szelep feladata?", "correct_answer": "Megakadályozni, hogy az indításkor a szívó oldalon fellépő túlnyomás, illetve fűtés vagy leolvasztás kor kialakuló magas elpárologtató nyomás ne tudja túlterhelni, túlmelegíteni a kompresszort.", "topic": ""}
+{"question": "Mik a kompresszorolajokkal szemben támasztott elvárásink?", "correct_answer": "Biztosítson megfelelő kenést, esetenként tömítést. Segítse a kompresszor megfelelő hűtését. Fizikailag, kémiailag stabil legyen, ne lépjen reakcióba a hűtőközeggel, illetve a berendezésben alkalmazott egyéb anyagokkal, megfelelő legyen a viszkozitása, ne legyen hajlamos savasodásra, ne legyen hajlamos kokszosodásra.", "topic": ""}
+{"question": "Mikor és kinek kell F-ÜHG jelentést tenni?", "correct_answer": "Az F-ÜHG jelentést azon vállalkozásoknak kell leadniuk a Nemzeti Klímavédelmi Hatóság felé, amelyek F-ÜHG-t vásárolnak, felhasználnak, értékesítenek. Amennyiben csak berendezés-tulajdonos, nem kell beküldeni jelentést. F-ÜHG jelentést utoljára 2016-ban (2016.március 31.-ig) kell benyújtani, utána az F-ÜHG raktár folyamatos vezetése felváltja ezt a funkciót.", "topic": ""}
+{"question": "Mikor és kinek kell megfelelési nyilatkozatot kitöltenie, és mire szolgál?", "correct_answer": "Megfelelési nyilatkozat többek között a szükséges technikai felszereltség meglétét igazolja és minden cégképesítés megszerzéséhez szükséges. Megfelelési nyilatkozatot a Klímagáz adatbázisból kell letölteni, majd kitölteni és cégszerűen aláírva valamint az aláírási címpéldány másolatával együtt szkennelve fel kell tölteni a Klímagáz adatbázisba.", "topic": ""}
+{"question": "Mikor kell a szivárgásészlelő rendszert telepíteni?", "correct_answer": "Abban az esetben, ha a berendezésben lévő töltet mennyisége legalább 500 tonna CO2-egyenértéknek felel meg, gondoskodni kell szivárgásészlelő rendszer telepítéséről.", "topic": ""}
+{"question": "Mikor kell használni a \"Leltár\" funkciót a Klímagáz adatbázisban?", "correct_answer": "A „Leltár” gombra kattintva lehet mennyiséget módosítani. Ezt akkor kell használni, mikor eltérés van a rendszerben nyilvántartott és a valós mennyiség között. Eltérés oka lehet például tároló palackból történő elszivárgás, mérési pontatlanság, adminisztrációs hiba. Ez a funkció a valós készletmozgások nyilvántartására (vétel, eladás, felhasználás) nem használható! A leltár menüben meg kell adni a módosítás dátumát, az új helyes mennyiséget (nem az eltérést!), és szövegesen indokolni kell az eltérés okát. A „Mentés”gombra kattintva rögzítésre kerül a módosítás. A „Mégse” gombra kattintva törlődnek a felvitt adatok és nem kerülnek mentésre.", "topic": ""}
+{"question": "Mikor működik jól a háromutas szelep?", "correct_answer": "Ha egyszerre mindig csak egy irányba ereszt át.", "topic": ""}
+{"question": "Milyen alapvető villamos mérőműszerek szükségesek a hűtőberendezések üzembe helyezéséhez és a karbantartásához?", "correct_answer": "1. Egyen-, és váltakozó feszültségmárő és árammérő 2. Ellenállás mérő 3. Lakatfogó árammérésre 4. ÉV mérő: szigetelési ellenállás, szivárgóáram, védővezető folytonosság mérő.", "topic": ""}
+{"question": "Milyen dokumentáció követi a veszélyes hulladék szállítását és átadását?", "correct_answer": "SZ lap.", "topic": ""}
+{"question": "Milyen előírásokat szükséges betartani hulladékok közúti szállítása esetén?", "correct_answer": "Az ADR előírásait.", "topic": ""}
+{"question": "Milyen értéket állítunk az expanziós szelep beállításakor?", "correct_answer": "Túlhevítés.", "topic": ""}
+{"question": "Milyen gyakran kell szivárgásvizsgálatot végezni?", "correct_answer": "Szivárgásvizsgálatot 5 tonna, de kevesebb, mint 50 tonna CO2-egyenértéknek megfelelő töltet esetén 12 havonta; 50 tonna, de kevesebb, mint 500 tonna CO2-egyenértéknek megfelelő töltet esetén hathavonta, legalább 500 tonna CO2-egyenértéknek megfelelő töltet esetén háromhavonta. Szivárgásészlelő rendszer esetén a 12 hónap, a fél év, illetve a három hónap duplázódik, azaz 24 hónap, 12 hónap és 6 hónapra tolódik ki a szivárgásvizsgálati kötelezettség. 10 tonna CO2 egyenérték alatti hermetikusan zárt rendszeren nem kell időszakos szivárgásvizsgálatot végezni.", "topic": ""}
+{"question": "Milyen hűtőközegeket szabad csak folyadék-halmazállapotban betölteni a hűtőberendezésbe?", "correct_answer": "Zeotróp.", "topic": ""}
+{"question": "Milyen irányelvet fogalmaz meg a hulladékhierarchia?", "correct_answer": "A hulladékképződés megelőzése, minimalizálása, a hulladék újrahasználatra történő előkészítése, a hulladék újrafeldolgozása, a hulladék egyéb hasznosítása, különösen energetikai hasznosítása, valamint a hulladék ártalmatlanítása, lerakása.", "topic": ""}
+{"question": "Milyen jelek utalhatnak arra, hogy a kompresszor olaj állapota nem megfelelő?", "correct_answer": "Színe sötétül, illata égett, állaga zavaros, láthatóan szilárd darabok találhatóak benne.", "topic": ""}
+{"question": "Milyen kategóriákba lehet képesített vállalkozásként regisztrálni?", "correct_answer": "Legfontosabb képesített vállalkozás típusok: HR, MR, Visszanyerő, Szivárgásvizsgáló, NK, VE, Ártalmatlanító, Regeneráló, Gyártó.", "topic": ""}
+{"question": "Milyen kialakítású léghűtéses kondenzátorokat ismer?", "correct_answer": "Rézcsöves és alumínium lamellás, teljes egészében kompakt alumínium, un. Mikrocsöves.", "topic": ""}
+{"question": "Milyen követelményt ír elő az AHRI 700 szabvány a víztartalomra vonatkozóan?", "correct_answer": "A hűtőközeg víztartalom max. 10 ppm lehet.", "topic": ""}
+{"question": "Milyen közegeket nevezünk blendeknek?", "correct_answer": "Hűtőközeg keverékeket.", "topic": ""}
+{"question": "Milyen módon lehetünk biztosak a kompresszorolaj megfelelő állapotában?", "correct_answer": "Laborvizsgálattal.", "topic": ""}
+{"question": "Milyen olajat használunk villamos betét motorral szerelt kompresszorokban?", "correct_answer": "POE", "topic": ""}
+{"question": "Milyen tevékenység az, amelyből nem keletkezik hulladék?", "correct_answer": "A rendszerben található mérőműszerek leolvasása.", "topic": ""}
+{"question": "Mire használjuk a 3-utas szelepet?", "correct_answer": "A kompresszor nyomóágának irányításához, attól függően, hogy fűtés vagy hűtés üzemben szükséges-e a berendezés működése.", "topic": ""}
+{"question": "Mire szolgál a telepítési tanúsítvány?", "correct_answer": "A telepítési tanúsítvány arra szolgál, hogy igazolható legyen, hogy az előtöltött berendezést képesített személy telepítette.", "topic": ""}
+{"question": "Mit ábrázol a log p-h diagramban a baloldali határgörbe?", "correct_answer": "A telített folyadékállapotokat.", "topic": ""}
+{"question": "Mit értünk ártalmatlanítás alatt?", "correct_answer": "Azt a folyamatot, amelynek során az F-gázokat átalakítják vagy lebontják egy vagy több olyan stabil anyaggá, amelyek nem fluortartalmú üvegházhatású gázok; gyakorlatilag a hűtőközegek szabályozott módon történő elégetését.", "topic": ""}
+{"question": "Mit értünk hermetikusan zárt berendezés alatt?", "correct_answer": "Olyan berendezés, amelyben a gyártó telephelyén a gyártási folyamat során az összes F-gázt tartalmazó alkatrészt hegesztéssel, keményforrasztással vagy hasonló tartós csatlakozással gáztömörré teszik; ez utóbbi csatlakozás magában foglalhatja a megfelelő javítást vagy ártalmatlanítást lehetővé tevő zárósapkás szelepeket és zárósapkás szervizcsatlakozókat, és rendszerben a kapcsolódás csatlakozásainak szivárgási mértéke kevesebb mint 3 gramm évente;", "topic": ""}
+{"question": "Mit értünk regenerálás alatt?", "correct_answer": "A visszanyert hűtőközeg oly módon történő újrafeldolgozását jelenti engedélyezett regeneráló létesítményekben, amely megegyezik az új hűtőközeg kereskedelmi specifikációjával, azaz megfelel az AHRI 700 szabványban előírt követelményeknek.", "topic": ""}
+{"question": "Mit értünk újrahasznosítás alatt?", "correct_answer": "A berendezésből lefejtett hűtőközeg alapvető tisztítást követő újrafelhasználását. Alapvető tisztítási folyamat alatt értjük mindazon munkafolyamatokat, amelyek adott helyszínen elvégezhetőek.", "topic": ""}
+{"question": "Mit jelent a KÜJ szám?", "correct_answer": "Egy 9 számból álló, a környezetvédelmi adatszolgáltatások során kötelezően használandó azonosító (környezetvédelmi ügyfél jel).", "topic": ""}
+{"question": "Mit jelent a TEWI érték?", "correct_answer": "A TEWI jelentése: Total Equivalent Warming Impact = teljes egyenértékű melegítő hatás. A hűtőközeg üvegházhatása, plusz az üzemeltetése során felhasznált energia üvegázhatása együtt.", "topic": ""}
+{"question": "Mit jelent az EWC kód?", "correct_answer": "A 72/2013. (VIII. 27.) VM rendelet a hulladékjegyzékről, tartalmazza, az egyes hulladékok 3x2 jegyű számokkal jelzett EWC kód besorolását. A veszélyes hulladéknak minősülő hulladékok esetében az EWC kódnál * jellel van jelezve a veszélyes hulladék státusz.", "topic": ""}
+{"question": "Mit jelent az F-gáz ártalmatlanítása?", "correct_answer": "A fluortartalmú üvegházhatású gáz átalakítását vagy lebontását egy olyan stabil anyaggá, ami nem fluortartalmú üvegházhatású gáz.", "topic": ""}
+{"question": "Mit jelent az F-gáz újrahasznosítása ?", "correct_answer": "A visszanyert fluortartalmú üvegházhatású gázok alapvető tisztítást követő újrafelhasználását.", "topic": ""}
+{"question": "Mit jelent az olajok viszkozitása?", "correct_answer": "A belső súrlódás, a belső ellenállásának mértéke a csúsztató feszültséggel szemben.", "topic": ""}
+{"question": "Mit kell tenni szivárgás észlelése esetén, és hogyan történik ennek dokumentálása?", "correct_answer": "A szivárgásészlelés esetén a lehető legrövidebb időn belül meg kell szüntetni a szivárgás okát, és a javítást követő egy hónapon belül meg kell győződni a javítás sikerességéről. Minden olyan intézkedést meg kell tenni, ami megakadályozza, hogy a szivárgás továbbra is fennálljon. Dokumentálni elektronikus jegyzőkönyv formájában a Klímagáz adatbázisban szükséges.", "topic": ""}
+{"question": "Mit nevezünk „azeotróp” keverékeknek?", "correct_answer": "Két vagy több hűtőközeg meghatározott arányú elegye, amely egyanyagú közegként viselkedik.", "topic": ""}
+{"question": "Mit nevezünk biztonsági hűtőközegnek?", "correct_answer": "Biztonsági hűtőközegnek nevezzük azokat a hűtőközegeket, melyek nem tűz és robbanásveszélyesek és nem mérgezőek.", "topic": ""}
+{"question": "Mit nevezünk hermetikusan zárt hűtőkörnek?", "correct_answer": "Minden hűtőközeget tartalmazó rész szorosan záródóra készült hegesztés, forrasztás, vagy hasonló állandó összeköttetés révén, amely magában foglalhat zárósapkás szelepeket és zárósapkás nyílásokat, amelyek lehetővé teszik a megfelelő javítást és visszanyerést, és amelyek 3 gramm/év-nél alacsonyabb tesztelt szivárgási értékkel rendelkeznek a megengedett maximális nyomás legalább egynegyedénél.", "topic": ""}
+{"question": "Mit nevezünk hulladéknak?", "correct_answer": "Bármely anyag vagy tárgy, amelytől birtokosa megválik, megválni szándékozik, vagy megválni köteles.", "topic": ""}
+{"question": "Mit nevezünk retrofitnak? Milyen szempontokat kell figyelembe venni?", "correct_answer": "Retrofit eljárás keretében a berendezést hosszú távon átállítjuk valamilyen más hűtőközegre. Az alábbi tényezők figyelembe vétele szükséges és elégséges a retrofit eljárás során alkalmazott közeg meghatározásához: nyomás, volumetrikus hűtőteljesítmény, olaj-kompatibilitás, szerkezeti anyagokkal való összeférhetőség, gyúlékonyság, GWP, ár, hőmérsékletcsúszás, mérgezőség.", "topic": ""}
+{"question": "Mit nevezünk zeotróp keveréknek?", "correct_answer": "Állandó nyomáson eltérő hőmérséklettel párolognak komponensei.", "topic": ""}
+{"question": "Mit nevezzünk veszélyes hulladéknak?", "correct_answer": "A hulladék törvény 1. mellékletében meghatározott veszélyességi jellemzők legalább egyikével rendelkező hulladékot.", "topic": ""}
+{"question": "Mitől változik az expanziós szelep áteresztő képessége?", "correct_answer": "Az elpárologtató egység kilépésénél levő nyomás- és hőmérséklet értékek változásától.", "topic": ""}
+{"question": "Mivel teljesíti az üzemeltető a szivárgásellenőrzésre vonatkozó kötelezettségei körében fennálló gépkönyv- és eseménynapló- vezetési kötelezettségét?", "correct_answer": "A Klímagáz adatbázisba való üzemeltetői és hűtőköri regisztrációval, valamint a hűtőkörhöz képesített vállalkozás hozzárendelésével, továbbá a vonatkozó dokumentumok vezetésének ellenőrzésével.", "topic": ""}
+{"question": "Nagy hőmérséklet különbség hatására…..", "correct_answer": "gyorsabban megy végbe a hőenergia áramlása.", "topic": ""}
+{"question": "Önállóan működöképes-e az elektronikus expanziós szelep?", "correct_answer": "Nem, csak jeladókkal és vezérlővel.", "topic": ""}
+{"question": "Van-e olyan eset, hogy a szivárgás észlelésének tényét a berendezés tulajdonosnak/üzemeltetőnek kell bejelentenie a Hatóság felé.", "correct_answer": "Amennyiben a képesített vállalkozás képesített alkalmazottja határidőn belül nem töltötte fel a szivárgásészlelési jegyzőkönyvet, az üzemeltető köteles azt a szivárgás észlelését követő 15 napon belül a Hatóságnak bejelenteni.", "topic": ""}
+{"question": "Szükséges-e berendezés-nagykereskedő regisztrációja során Megfelelési nyilatkozat feltöltése a Klímagáz adatbázisban?", "correct_answer": "Nem.", "topic": ""}
+{"question": "Szükséges-e berendezés-viszonteladó regisztrációja során Megfelelési nyilatkozat feltöltése a Klímagáz adatbázisban?", "correct_answer": "Nem.", "topic": ""}
+{"question": "Szükséges-e HR céges regisztráció során Megfelelési nyilatkozat feltöltése a Klímagáz adatbázisban?", "correct_answer": "Igen.", "topic": ""}
+{"question": "Szükséges-e HR tevékenység végzéséhez céges regisztráció során H-I vagy H-II képesítéssel rendelkező személy hozzárendelése a céghez?", "correct_answer": "Igen.", "topic": ""}
+{"question": "Szükséges-e hűtőközeggel kereskedő nagykereskedő regisztrációja során Megfelelési nyilatkozat feltöltése a Klímagáz adatbázisban?", "correct_answer": "Igen.", "topic": ""}
+{"question": "Szükséges-e képesített személy (magánszemély) regisztrációja során Megfelelési nyilatkozat feltöltése a Klímagáz adatbázisban?", "correct_answer": "Nem.", "topic": ""}
+{"question": "Szükséges képesített személy alkalmazása, és a Klímagáz adatbázisban a vállalkozáshoz foglalkoztatottként való hozzárendelése, ha a vállalkozás VE berendezés kategóriában regisztrált?", "correct_answer": "Nem.", "topic": ""}
+{"question": "Válassza ki a HFO hűtőközegekre jellemző tulajdonságokat!", "correct_answer": "Mérsékelt gyúlékonyságuk miatt töltetkorlátozás és szikramentes szerelvények használata van előírva. Elterjedése: Az R1234yf-et gépjármű klímákban alkalmazzák, az R1234ze terjedőben van alacsony hőmérsékletű rendszerekben.", "topic": ""}
+{"question": "Van-e jelenleg olyan eljárás vagy műszer, amellyel vákuum alatt álló berendezésnél ki lehet mutatni az esetleges tömítetlenség helyét?", "correct_answer": "A technika jelenlegi szintjén ismereteink szerint nincs.", "topic": ""}
+{"question": "A szárító szűrő elem a hűtőkör mely részén található?", "correct_answer": "Kondenzátor és expanziós szelep közötti szakaszon.", "topic": ""}
+{"question": "Az expanziós szelep milyen- és hol mért értékek alapján szabályoz?", "correct_answer": "Az expanziós szelep folyamatosan szabályoz az elpárologtatóegység kilépésénél levő nyomás- és hőmérséklet értékek alapján.", "topic": ""}
+{"question": "Az un. „létradiagram” (vagy Mollier-diagram, h-x diagram) alapján melyik a legfőbb paraméter, ami meghatározza a klímaberendezés üzemmódját?", "correct_answer": "A beállított hőmérséklet érték és visszaszívott levegő hőmérséklete.", "topic": ""}
+{"question": "Mi a feladata a hűtőkörben az expanziós szelepnek?", "correct_answer": "Az expanziós szelep szerepe abban áll, hogy az általa létrehozott fojtás, nyomáskülönbség a magas nyomású oldalon a hűtőközeg kondenzációs hőmérsékletét magas értéken tartsa és az alacsony nyomású oldalon a hűtőközeg forráspontja lényegesen alatta legyen a hűtendő tér hőmérsékletének.", "topic": ""}
+{"question": "Mi a feladata a hűtókörben a szárító-szűrő elemnek?", "correct_answer": "Megköti a rajta átáramló folyadék állapotú hűtőközegben esetleg előforduló nedvességet, ugyanakkor fizikailag meg is szűri azt.", "topic": ""}
+{"question": "Mi a folyadék utóhűtő szerepe a hűtőkörben?", "correct_answer": "A hűtőközeget a kondenzációt követően telítési hőmérséklete alá hűtjük.", "topic": ""}
+{"question": "Mi a folyadékgyűjtő tartály szerepe?", "correct_answer": "Szerepe abban áll, hogy a kondenzátor hőcserélőkből érkező magas nyomású, de már alacsony hőmérsékletű folyadék- és esetleg még gőz halmazállapotú hűtőközeg elegyből kizárólag folyadék áramolhasson tovább az expanziós szelep felé.", "topic": ""}
+{"question": "Mi a kompresszor feladata a hűtőkörben?", "correct_answer": "A hűtőközeg áramlásának fenntartása a rendszerben, nyomáskülönbség létrehozása a hűtőkörben, ami megteremti annak lehetőségét, hogy a hűtőközeg az elpárologtató egységben párologni tudjon (hőt tudjon felvenni, azaz hűtsön), a kondenzátoregységben pedig újra folyadék halmazállapotúvá válhasson (hőt tudjon leadni a környezet felé).", "topic": ""}
+{"question": "Mi lehet az oka, ha a kompresszor gyakran ki- és bekapcsol?", "correct_answer": "Alacsony hűtőközeg-töltet, elzáródott /eltömődött folyadék ág mágnesszelep, vagy expanziós szelep (alacsony nyomás a szívóoldalon), illetve magas nyomóoldali nyomás (kondenzátor ventilátor hiba, dugulás a nyomóoldalon).", "topic": ""}
+{"question": "Mi okozhat zajos működést spirálkompresszor esetében?", "correct_answer": "Kompresszor rögzítő elemeinek hibája, folyadék (hűtőközeg) belépése a szívóoldalon, a kompresszor fordított irányban forog (fázissorrend hiba), egyéb kompresszor hiba.", "topic": ""}
+{"question": "Mi okozhatja a szívóoldali ág eljegesedését?", "correct_answer": "Elszennyeződött elpárologtató hőcserélő (nincs megfelelő hőfelvétel), az elpárologtató ventilátorok nem üzemelnek.", "topic": ""}
+{"question": "Mi okozhatja a kompresszor magas áramfelvételét?", "correct_answer": "Hűtőköri hiba (magas nyomás), megszorult kompresszor (csapágyazás, vagy mozgó spirál spirálkompresszorok esetében), alacsony tápfeszültség, tekercsprobléma, kondenzátor ventilátor hiba.", "topic": ""}
+{"question": "Mi okozhatja a szívóoldali ág eljegesedését?", "correct_answer": "Az expanziós szelep túl sok hűtőközeget juttat az elpárologtató hőcserélőbe (pl. helytelen túlhevítés érték, vagy rossz expanziós szelep érzékelő érintkezés).", "topic": ""}
+{"question": "Miért alkalmazzák gyakran a folyadékági mágnesszelepet a hűtőkörben?", "correct_answer": "Egyrészt lehetővé teszi azt a szervizeljárást, hogy a készülék önmaga, az alacsonynyomású oldalból a hűtőközeget a magasnyomású oldalra szállítsa folyadék állapotban, így a hűtőközeg töltet lefejtése nélkül tudunk javítást végezni az alacsony nyomású oldalon. Másrészt megakadályozza a rendszer leállás utáni hűtőközeg áramlást, mely egyes üzemi körülmények között akár a kompresszor folyadékkal történő elárasztását eredményezheti a szívóoldalon.", "topic": ""}
+{"question": "Miért alkalmazzák gyakran a folyadékági mágnesszelepet a hűtőkörben?", "correct_answer": "Csoportaggregátoros, több hűtési pozíciót tartalmazó rendszerek esetén a hűtött egységek hőfokszabályzásának céljából.", "topic": ""}
+{"question": "Miért fontos a magas nyomású kapcsoló alkalmazása a hűtőkörben?", "correct_answer": "Rendszervédelem, ha a hűtőkör nyomóoldali nyomása meghalad egy a hűtőközeg fajtájától függő küszöbértéket, a vezérlés a kompresszort leállítja.", "topic": ""}
+{"question": "Miért fontos a túlhevítési érték?", "correct_answer": "A túlhevítési érték fenntartása azért fontos, hogy adott üzemi körülmények között az elpárologtató egységet optimálisan tudjuk üzemeltetni (megfelelő mennyiségű folyadékkal ellátni), továbbá elkerülhessük azt, hogy a kompresszorhoz folyadék halmazállapotú hűtőközeg juthasson vissza.", "topic": ""}
+{"question": "Miért fontos a magas nyomású kapcsoló alkalmazása a hűtőkörben?", "correct_answer": "Rendszervédelem, ha a hűtőkör nyomóoldali nyomása meghalad egy a hűtőközeg fajtájától függő küszöbértéket, a vezérlés a kompresszort leállítja.", "topic": ""}
+{"question": "Miért fontos az alacsony nyomású kapcsoló alkalmazása?", "correct_answer": "Rendszervédelem, ha a hűtőkör szívóoldali nyomása egy a hűtőközeg fajtájától függő küszöbérték alá csökken, a vezérlés kompresszort leállítja.", "topic": ""}
+{"question": "Milyen a teljesítményszabályozási lehetőségek vannak hermetikus spirálkompresszorok esetében?", "correct_answer": "Frekvencia szabályozás, digitális szeleppel történő szabályozás.", "topic": ""}
+{"question": "Milyen diagramban lehet szemléletesen bemutatni a hűtőkörben végbemenő folyamatokat?", "correct_answer": "Adott hűtőközegre vonatkozó log p-h diagramban.", "topic": ""}
+{"question": "Milyen diagramm mutatja be szemléletesen a vezérlés logikáját?", "correct_answer": "Un. létradiagram.", "topic": ""}
+{"question": "Milyen egyszerű módszerrel ellenőrizhető a folyadékoldalra beépített szárító-szűrő elem állapota?", "correct_answer": "Egyszerű, tapintással történő hőmérséklet érzékeléssel.", "topic": ""}
+{"question": "Milyen hűtőköröket nevezünk hermetikusan zárnak?", "correct_answer": "Az olyan rendszereket, ahol minden hűtőközeget tartalmazó rész szorosan záródóra készült hegesztés, forrasztás, vagy hasonló állandó összeköttetés révén, amely magában foglalhat zárósapkás szelepeket és zárósapkás nyílásokat, amelyek lehetővé teszik a megfelelő javítást és visszanyerést, és amelyek 3 gramm/év-nél alacsonyabb tesztelt szivárgási értékkel rendelkeznek a megengedett maximális nyomás legalább egynegyedénél.", "topic": ""}
+{"question": "Mit érdemes ellenőrizni, ha a kompresszor nem működik?", "correct_answer": "A berendezés bekapcsolt állapotát, esetleges késleltetési funkciót, a tápfeszültséget, a vezérlés működését és az indítási jel meglétét (van-e hűtési igény), az inverter működését és a kiadott ACOK jelet, illetve azt, hogy valamelyik védelmi rendszer nem blokkolja-e a működést.", "topic": ""}
+{"question": "Mit értünk a túlhevítés érték alatt?", "correct_answer": "A túlhevítési érték azt mutatja, hogy az állandó hőmérsékleten és állandó nyomáson végbemenő elpárolgás után a már gőz állapotú hűtőközeget hány fokkal melegítjük, „hevítjük” elpárolgási hőmérséklete fölé.", "topic": ""}
+{"question": "Miért fontos az alacsony nyomású kapcsoló alkalmazása?", "correct_answer": "Rendszervédelem, ha a hűtőkör szívóoldali nyomása egy a hűtőközeg fajtájától függő küszöbérték alá csökken, a vezérlés a kompresszort leállítja.", "topic": ""}
+{"question": "2015. január 1-től szabad-e forgalomba hozni 150-es vagy annál nagyobb GWP-vel rendelkező HFC-ket tartalmazó háztartási hűtőszekrényeket és fagyasztógépeket?", "correct_answer": "Nem, az 2024/573/EU rendelet alapján már nem szabad forgalomba hozni.", "topic": ""}
+{"question": "A folyadékleválasztót a hűtőkör melyik oldalára szereljük be?", "correct_answer": "Kompresszorok szívóvezetékébe.", "topic": ""}
+{"question": "A fűtött katódos szivárgáskereső érzékeli-e a levegőben lévő vízgőzt?", "correct_answer": "Nem.", "topic": ""}
+{"question": "A hermetikus kompresszorok háza…", "correct_answer": "...szerkezetileg független a benne működő kompresszortól.", "topic": ""}
+{"question": "A hűtőberendezés milyen állapotát célszerű kihasználni a hűtőközeg betöltésénél?", "correct_answer": "Az eredményes vákuumtartási próba befejezésekor a berendezésben uralkodó vákuummal \"beszívatjuk\" a hűtőközeget.", "topic": ""}
+{"question": "A hűtőberendezések többféle módon is hozzájárulhatnak a légkör üvegházhatásának növekedéséhez, mégpedig:", "correct_answer": "Üvegházhatást okoz a berendezés működtetéséhez szükséges villamos energia előállítása során a hőerőművekben kibocsátott CO2, valamint a berendezésekben található hűtőközeg légkörbe jutása.", "topic": ""}
+{"question": "A hűtőkompresszorok alapvető típusai a működési elv szerint:", "correct_answer": "Alternáló dugattyús, Gördülő dugattyús, Csavarkompresszor, Spirálkompresszor, Turbó kompresszor", "topic": ""}
+{"question": "A hűtőkörben az izobután szívóoldali nyomásértéke…", "correct_answer": "alacsonyabb a légköri nyomásnál.", "topic": ""}
+{"question": "A hűtőközeggel szemben elvárt tulajdonság(ok):", "correct_answer": "Az elpárolgás és a lecsapódás állandó nyomáson és hőmérsékleten történjen.", "topic": ""}
+{"question": "A hűtőtechnikában használt szervizmanométerek milyen nyomást mérnek?", "correct_answer": "Relatív nyomás.", "topic": ""}
+{"question": "A kényszerített légáramoltatású felületi léghűtőket nevezik \"csendes hűtés\"-nek?", "correct_answer": "Nem.", "topic": ""}
+{"question": "A kompresszor és a kondenzátor közötti vízszintes csőszakasz hogyan szerelendő?", "correct_answer": "3% lejtéssel a kondenzátor felé.", "topic": ""}
+{"question": "A kondenzációs hőmérsékletet befolyásolja:", "correct_answer": "A kondenzátor hőátadó felülete.", "topic": ""}
+{"question": "A kondenzátor funkciója a hűtőkörben, hogy", "correct_answer": "kivonja a hűtőközeg rejtett hőjét, hogy az folyadék halmazállapotú legyen.", "topic": ""}
+{"question": "A kondenzátorban a hűtőközeg", "correct_answer": "nagy nyomáson, magas hőmérsékleten leadja a környezetének a hőtartalmát.", "topic": ""}
+{"question": "A közvetítőközegek jellemzője:", "correct_answer": "A legkisebb elpárolgási hőmérsékletnél 3-8 Kelvinnel alacsonyabb fagyáspont.", "topic": ""}
+{"question": "A közvetítőközegek jellemzője:", "correct_answer": "Nagy fajhő.", "topic": ""}
+{"question": "A léghűtők levegőoldali felületén dér rakódik le, ha", "correct_answer": "annak hőmérséklete kisebb a belépő levegő harmatponti és a víz dermedési hőmérsékleténél.", "topic": ""}
+{"question": "A leolvasztás miatt fellépő többlethőterhelés miatt...", "correct_answer": "az elpárologtató hűtőteljesítménye nagyobb kell legyen a kielégítendő hűtési igénynél.", "topic": ""}
+{"question": "A levegővel milyen arányban keveredve gyúlékony az izobután?", "correct_answer": "1,8-8,4 V%", "topic": ""}
+{"question": "A nyomástartási próba alatt változhat-e a nyomás?", "correct_answer": "Ha a próba kezdetekor és végén ugyanaz a rendszer hőmérséklete, a rendszer akkor tekinthető tömörnek, ha a nyomás nem csökkent. Ha a hőmérséklet változik, a nyomás annyit változhat, amennyit a hőmérsékletváltozás indokolttá tesz.", "topic": ""}
+{"question": "A propán a levegőnél", "correct_answer": "nehezebb.", "topic": ""}
+{"question": "A szokásos, Bourdon-csöves manométerek milyen nyomást mutatnak?", "correct_answer": "Túlnyomást.", "topic": ""}
+{"question": "A termodinamika I. főtétele kimondja, hogy :", "correct_answer": "a rendszer által felvett hőmennyiség és a rendszer által kifejtett külső munka összege egyenlő a belső energia megváltozásának mértékével.", "topic": ""}
+{"question": "A termodinamika II. főtétele kimondja azt, hogy", "correct_answer": "a hő energiabefektetés nélkül magasabb hőmérsékletű testről az alacsonyabb hőmérsékletű felé áramlik.", "topic": ""}
+{"question": "Adja meg a freon hűtőközegek áramlási sebességtartományait az egyes szakaszokban m/s", "correct_answer": "szívó:6…12, nyomó:6…15, folyadék:0,3…1,2, kondenz: 0,3…0,5", "topic": ""}
+{"question": "Állásos szabályzó-e a magasnyomás kapcsoló?", "correct_answer": "Igen.", "topic": ""}
+{"question": "Az alábbiak közül melyiket nevezzük hűtős szaknyelven \"adagoló\"-nak?", "correct_answer": "Termosztatikus expanziós szelep.", "topic": ""}
+{"question": "A következő hűtőközegek: az R22; R404A; R407C és az R134a melyik veszélyességi osztályba tartoznak?", "correct_answer": "A1", "topic": ""}
+{"question": "Az elektronikus szivárgáskeresés elvégzéséhez be kell-e tölteni a teljes hűtőközeg mennyiséget?", "correct_answer": "Nem kell betölteni a teljes hűtőközeg mennyiséget, hanem csak annyit, amennyivel a szükséges próbanyomás értékét elérhetjük.", "topic": ""}
+{"question": "Az elpárologtatóban a hűtőközeg", "correct_answer": "alacsony hőmérsékleten, alacsony nyomáson elpárolog, miközben hőt von el a hűtendő közegtől.", "topic": ""}
+{"question": "Az első üzembe helyezés után a hűtőberendezés mely részeit kell kézi szivárgásvizsgáló eszközzel ellenőrizni?", "correct_answer": "Valamennyi potenciális szivárgáshelyet.", "topic": ""}
+{"question": "Az izobután a levegőnél …", "correct_answer": "nehezebb.", "topic": ""}
+{"question": "Az izobutánnak az R134a-hoz képest…", "correct_answer": "alacsonyabb a párolgási és a kondenzációs nyomás értéke.", "topic": ""}
+{"question": "Az olajleválasztó beépítése szükségtelenné teszi-e a vezetékek olajelhordással kapcsolatos szerelési szabályainak betartását?", "correct_answer": "Nem, mert a leválasztás nem maradéktalan.", "topic": ""}
+{"question": "Az R32 hűtőközeg melyik veszélyességi osztályba tartozik?", "correct_answer": "A2L", "topic": ""}
+{"question": "Az R-290 hűtőközeg esetén kell-e a felhasználást rögzíteni a Klímagáz adatbázisban?", "correct_answer": "Igen.", "topic": ""}
+{"question": "Az R-600a hűtőközeg melyik veszélyességi osztályba tartozik?", "correct_answer": "A3", "topic": ""}
+{"question": "Az R-717 hűtőközeg melyik veszélyességi osztályba tartozik?", "correct_answer": "B2L", "topic": ""}
+{"question": "Az R-744 hűtőközeg melyik veszélyességi osztályba tartozik?", "correct_answer": "A1", "topic": ""}
+{"question": "Behabosított elpárologtatójú R-600a töltetű készülékek tartalmazhatnak-e nem robbanásbiztos villamos elemeket?", "correct_answer": "Igen.", "topic": ""}
+{"question": "Mik a csavarkompresszor teljesítményszabályozási módjai?", "correct_answer": "Párhuzamos kapcsolás, fordulatszám-szabályozás, megcsapolásos szabályozás, tolattyús szabályozás.", "topic": ""}
+{"question": "Egy hűtőkompresszor két különböző nyomású elpárologtatóval üzemel. Milyen szabályozókat, vagy szerelvényeket épít be?", "correct_answer": "A nagyobb nyomású elpárologtató után szívónyomás szabályozót.", "topic": ""}
+{"question": "Egyanyagú hűtőközegek esetében milyen jellegű vonalak a t=állandók (izotermák) a logp-h diagramban?", "correct_answer": "A p= állandó (izobár) vonalakkal párhuzamosak.", "topic": ""}
+{"question": "Eltávolítható-e csak vákuumozással a hűtőrendszerbe (részegységekbe, palackba stb.) bekerült nedvességtartalom?", "correct_answer": "Vákuumozással a rendszerben lévő ún. \"szabad\" nedvességtartalom általában eltávolítható, de az oldott állapotban lévő és a sejtnedvesség eltávolítására nem hatékony eljárás.", "topic": ""}
+{"question": "Eltávolíthatók-e vákuumolással a rendszerből a nem kondenzálható gázok?", "correct_answer": "A nem kondenzálható gázok megfelelő minőségű vákuumolással eltávolíthatók a rendszerből.", "topic": ""}
+{"question": "Három azonos fizikai mennyiséget mérő műszeren három osztálypontosság olvasható. \"A\" műszer: 0,1 \"B\" műszer: 1 \"C\" műszer: 5 Melyik műszerrel tudjuk a helyes értéket leginkább meghatározni ?", "correct_answer": "Az \"A\" műszer végkitérésre vonatkoztatott relatív hibaszázalékos határértéke 0,1.", "topic": ""}
+{"question": "Használható-e izobután esetén szivárgás kereséshez fűtött katódos szivárgásvizsgáló műszer?", "correct_answer": "Nem.", "topic": ""}
+{"question": "Hogy szabad szállítani kiszerelt izobutános kompresszort?", "correct_answer": "A csonkokat biztonságosan lezárva, elnyomva.", "topic": ""}
+{"question": "Hogyan ellenőrizzük a hordozható szivárgásvizsgáló berendezésünk üzemképességét?", "correct_answer": "A szonda beszívó nyílásához próbalyukkal közelítünk.", "topic": ""}
+{"question": "Hogyan ellenőrizzük a vélt szivárgáshelyet elektronikus kézi szivárgáskeresővel?", "correct_answer": "A szonda beszívó nyílását a vélt szivárgáshelytől 3 - 5 mm távolságban lassan, egyenletesen mozgatjuk.", "topic": ""}
+{"question": "Hogyan ellenőrizzük az utóhűtés megfelelőségét?", "correct_answer": "Közvetlenül az adagoló szerv elé a folyadékvezetékbe épített nézőüveggel.", "topic": ""}
+{"question": "Hogyan hat a hűtőközeg hiány a kompresszor olajszintjére?", "correct_answer": "A hűtőközeg tömegárama csökken, romlik az olajhordó képesség, ami a kompresszorban olajhiányhoz vezethet.", "topic": ""}
+{"question": "Hogyan hozunk létre hideget? ( a hűtés alapelve )", "correct_answer": "A köznyelvben lehetséges \"hideg létrehozása\", a fizika szerint azonban ez nem helyes kifejezés: a köznyelvi \"hideg\" a fizikában \"alacsonyabb hőmérsékletű meleg\", azaz egy anyag molekuláinak kisebb mozgási energiája.", "topic": ""}
+{"question": "Hogyan jelölik a keverék hűtőközeg vegyületeket (RXXX)?", "correct_answer": "R 4XX", "topic": ""}
+{"question": "Hogyan jelölik a szervetlen hűtőközeg vegyületeket (RXXX) ?", "correct_answer": "R 7XX", "topic": ""}
+{"question": "Hogyan kell a hűtőközegeket betölteni kapilláriscsöves hermetikus hűtőrendszerbe?", "correct_answer": "A hűtőközeg betöltése a motorkompresszor szívóoldalán lévő töltőcsonkján keresztül történik, ezért különös gondosságot igényel, a betöltés csak lassan történhet.", "topic": ""}
+{"question": "Hogyan kell a kompresszort beépíteni?", "correct_answer": "A környezettől és a hűtőrendszer többi elemétől rezgésmentesen elválasztani.", "topic": ""}
+{"question": "Hogyan kell a rezgéscsillapító csőszerelvényt beépíteni?", "correct_answer": "A mozgás iránya hossztengelyére merőleges legyen. Ez kompresszornál annak tengelyével párhuzamosságot jelent.", "topic": ""}
+{"question": "Hogyan kell a szerelőnek a megfelelő típusú és méretű elpárologtatót kiválasztani és beépíteni?", "correct_answer": "Az elpárologtató gyártójának jelleggörbéi és útmutatása alapján.", "topic": ""}
+{"question": "Hogyan kell a szerelőnek a megfelelő típusú és méretű kondenzátort kiválasztani és beépíteni?", "correct_answer": "A kondenzátor gyártójának jelleggörbéi és útmutatása alapján.", "topic": ""}
+{"question": "Melyik gázhoz viszonyítjuk a többi hűtőközeg GWP értékét?", "correct_answer": "A szén-dioxodéhoz, oly módon, hogy egy üvegházhatású gáz egy kilogrammjának 100 éves időszakra vonatkozó felmelegedési potenciálját viszonyítani kell egy kilogramm CO2 ugyanezen potenciáljához", "topic": ""}
+{"question": "Hogyan kell megkeresni a szivárgási helyeket?", "correct_answer": "A várható vagy feltételezhető tömítetlenségi helyekre habképző anyagot juttatunk és figyeljük, hogy képződik-e észrevehető nagyságú buborék, illetve olyan szivárgáskereső műszert használunk, amelyik a használt hűtőközeg szivárgását kimutatja.", "topic": ""}
+{"question": "Hogyan készül a \"csoportaggregát\"?", "correct_answer": "Gyakran már gyárilag közös alapkeretre szerelik és összecsövezik a kompresszorokat, sőt egyéb elemeket (pl. kondenzátort), szerelvényeket is felszerelnek.", "topic": ""}
+{"question": "Hogyan lehet megállapítani, hogy egy adott anyag bejelentésköteles-e a Klímagáz adatbázis F-ÜHG raktárában?", "correct_answer": "Ha a 2024/573 EU rendelet I. és/vagy II.1. mellékletében szereplő gázt tartalmaz, valamint, ha a hazai klímagáz törvény melléklete szerint klímagáz (F-gázok, ORLA-k, alternatív hűtőközegek) akkor r bejelentésköteles.", "topic": ""}
+{"question": "Hogyan magyarázza el az ügyfélnek az ózonkárosító hatást?", "correct_answer": "Klórozott, fluorozott szénhidrogének reakcióba lépve az ózonréteg O3 molekuláival magakadályozzák az ózon újraképződését, ezáltal a káros UV sugarak elérik a földfelszínt.", "topic": ""}
+{"question": "Hogyan működik a \"by-pass\" segédenergia nélküli teljesítmény szabályozó?", "correct_answer": "A kompresszor által a kondenzátor felé nyomott forró, nagynyomású hűtőközeget vezeti vissza az elpárologtató vagy a kompresszor szívóoldalára.", "topic": ""}
+{"question": "Hogyan működik a frekvencia átalakító, mint teljesítmény szabályozó?", "correct_answer": "A normál 50 Hz-es hálózati frekvenciát átalakítják és kb. 20Hz-től 80 Hz-ig terjedő tartományban fokozatmentesen változtatni tudják és vele változik a fordulatszám is.", "topic": ""}
+{"question": "Hogyan működik a szívóvezetékbe épített szervoműködésű teljesítményszabályozó?", "correct_answer": "Ha a szelep utáni szívónyomás csökken, a szelep előtti nyomást segédenergiaként felhasználva a szelep nyit és fordítva.", "topic": ""}
+{"question": "Hogyan működik a szívóvezetékbe épített, segédenergia nélküli, folytonos működésű, hőmérséklet érzékelésű hűtőteljesítmény szabályozó?", "correct_answer": "A hűtött légtér vagy hűtött folyadék hőmérsékletét érzékeli és a csőmembránban keletkező gőznyomás rugó ellenében mozgatja a szeleptányért.", "topic": ""}
+{"question": "Hogyan nevezzük a hűtőrendszerek közvetlen kibocsátásának (direkt emissziójának) és a közvetett kibocsátásának (indirekt emissziójának) együttes hatását?", "correct_answer": "TEWI értéknek.", "topic": ""}
+{"question": "Hogyan nevezzük azt a hőmennyiséget, amelyet az anyaggal közölni kell, hogy folyadékból gáz halmazállapotba menjen át?", "correct_answer": "Párolgáshő.", "topic": ""}
+{"question": "Hogyan szabad tölteni a \"azeotrop\" közegeket?", "correct_answer": "Gáz és folyadék állapotban.", "topic": ""}
+{"question": "Hogyan szabad tölteni a \"zeotrop\" közegeket?", "correct_answer": "Folyadék állapotban.", "topic": ""}
+{"question": "Hogyan számoljuk ki az abszolút nyomást?", "correct_answer": "A túlnyomást és a légköri nyomást összeadjuk.", "topic": ""}
+{"question": "Hogyan távolítja el a beforrasztott, nedvességgel telített folyadékszűrőt?", "correct_answer": "Ki kell vágni, hogy a melegítéssel a folyadék ne kerüljön vissza a rendszerbe.", "topic": ""}
+{"question": "Hogyan történik a csoportaggregátok hűtőteljesítmény szabályozása?", "correct_answer": "Az azonos vagy különböző teljesítményű kompresszorok egymás utáni be- illetve kikapcsolásával.", "topic": ""}
+{"question": "Hogyan történik a dér vagy jég leolvasztása elektromos energiával?", "correct_answer": "Az elektromos ellenállás fűtőtesteket úgy építik be, hogy azok fémesen érintkezzenek az elpárologtató lamelláival, tehát a deret hordozó felületeket melegítik.", "topic": ""}
+{"question": "Hogyan történik a dér vagy jég leolvasztása vízzel, vagy eutektikus folyadékkal?", "correct_answer": "A dér vagy jég olvadási hőmérsékleténél nagyobb hőmérsékletű folyadékot megfelelő mennyiségben és a teljes felületen egyenletes eloszlásban permetezik a felületre.", "topic": ""}
+{"question": "Hogyan történik a meleggázas leolvasztás?", "correct_answer": "A kompresszorból kilépő nagynyomású, túlhevített gőzt, illetve annak megfelelő hányadát a leolvasztandó elpárologtató csővezetékébe vezetve külön energiahordozó és energiaáram nélkül \"belülről\" oldható meg a leolvasztás.", "topic": ""}
+{"question": "Hogyan ürítjük ki a propánt a hűtőkörből?", "correct_answer": "Felszúrjuk a hűtőkört, majd egy leeresztő csövön keresztül a gázt kivezetjük a szabadba, ügyelve a biztonságra.", "topic": ""}
+{"question": "Hogyan ürítjük ki az izobutánt a hűtőkörből?", "correct_answer": "Felszúrjuk a hűtőkört, majd egy leeresztő csövön keresztül a gázt kivezetjük a szabadba, ügyelve a biztonságra", "topic": ""}
+{"question": "Hol és miért kell a zártrendszerű folyadékhűtőknél a kisnyomású tágulási tartályt alkalmazni?", "correct_answer": "A szivattyú szívóoldalán, azért, hogy a közvetítőközeg-szivattyú szívócsonkján esetleges tömítetlenség esetén se juthasson levegő a rendszerbe.", "topic": ""}
+{"question": "Hol és milyen feladatra alkalmazzák a zárt, kisnyomású nyomástartó tartályokat?", "correct_answer": "Zárt rendszerű folyadékhűtők közvetítő közegének tágulási és/vagy puffertartályaiként.", "topic": ""}
+{"question": "Hol és milyen körülmények között kell mérni a vákuumszivattyú végvákuum értékét?", "correct_answer": "A vákuumszivattyú szívócsonkjához lehetőleg legközelebb, friss olajjal feltöltött és bemelegített állapotban.", "topic": ""}
+{"question": "Hol használják a \"négyutú\" szelepet?", "correct_answer": "Meleggázas leolvasztásnál.", "topic": ""}
+{"question": "Hol talál a hűtőberendezés szerelője és üzemeltetője jogszabályban előírt utasításokat a szükséges dokumentumok és tanúsítványok rendszeresítésére és kitöltésére?", "correct_answer": "A legfontosabb források vonatkozó EU-s rendeletek, a magyar törvény és kormányrendeletek és az MSz EN-378 sz. szabvány. (A jogszabályok elérhetők a Hatóság honlapján is.)", "topic": ""}
+{"question": "Hol találhatóak a már tiltott, vagy tiltásra kerülő termékek és berendezések forgalombahozatalának tilalmi listája?", "correct_answer": "A 2024/573 EU rendelet IV. számú mellékletében.", "topic": ""}
+{"question": "Hova kell a nagynyomású folyadékgyűjtő tartályt beépíteni?", "correct_answer": "Közvetlenül a kondenzátor után, a nagynyomású folyadékvezetékbe.", "topic": ""}
+{"question": "Hűtőközeg gőz halmazállapotban történő betöltésekor szabad-e melegíteni a hűtőközeg palackot vagy tartályt?", "correct_answer": "A melegítés csak max. 40 Celsius fokos vízzel, vagy ezt a hőmérsékletet nem meghaladó szabályozott és védelemmel ellátott egyéb biztonságos fűtéssel történhet.", "topic": ""}
+{"question": "Kb. mekkora a 45 °C-os R-134a jelű hűtőközeg harmatponti telítési gőznyomása?", "correct_answer": "kb. 10 bar túlnyomás", "topic": ""}
+{"question": "Kb. mekkora az R410A jelű hűtőközeg telítési gőznyomása 55 °C-on? (túlnyomásban)", "correct_answer": "34 bar", "topic": ""}
+{"question": "Kb. mennyivel nagyobb -10 °C-on a széndioxid (R744) nyomása mint az izobutáné (R600a)?", "correct_answer": "25,4 bar-ral", "topic": ""}
+{"question": "Kell-e valamilyen energiát befektetni ahhoz, hogy a hűtendő közegből a hőenergia átáramoljon a hűtőközegbe?", "correct_answer": "Nem, mert a II. Főtétel értelmében a hőenergia önmagától áramlik a hűtendő közegből a hűtőközegben mesterségesen előállított kisebb energiaszintre.", "topic": ""}
+{"question": "Kézzel érzékelhető hőfok különbség van a folyadékszűrő két oldalán.", "correct_answer": "Ki kell cserélni", "topic": ""}
+{"question": "Kompresszorház szempontjából milyen csoportosításokat ismer?", "correct_answer": "Nyitott, félhermetikus, hermetikus", "topic": ""}
+{"question": "Kondenzátorok csoportosítása a hőt felvevő (környezeti) közeg szerint", "correct_answer": "Vízhűtéses kondenzátor, léghűtéses kondenzátor", "topic": ""}
+{"question": "Mágnesszeleppel történő indítási tehermentesítésnél még milyen szerelvények szükségesek?", "correct_answer": "A kompresszor és a kondenzátor közé visszacsapó szelepet építünk be a mágnesszelep megkerülő csatlakozása után. Megakadályozza, hogy az indítás alatt a gyűjtőből folyadék juthasson a szívó oldalra.", "topic": ""}
+{"question": "Magyarázza el az ügyfélnek, hogy a mesterséges hűtésre mikor van szükség!", "correct_answer": "Ha a hűtendő közeg hőmérsékletét a természetes hűtőközegnél kisebb értékre kell csökkenteni, illetve ezen tartani.", "topic": ""}
+{"question": "Mondjon példát az üvegházhatás és a globális felmelegedés környezeti hatásaira!", "correct_answer": "Óceánok szintjének drasztikus emelkedése a sarki jég olvadása miatt, az egyre gyakoribb szélsőséges időjárási jelenségek miatt bizonyos régiókban egyre több csapadék hull, más területeken intenzívebbé válnak a hőhullámok és az aszályok, erdőtüzek, az édesvíz készletek csökkenése, bilógiai sokféleség csökkenése, talajok minőségi és mennyiségi romlása.", "topic": ""}
+{"question": "Magyarázza el az üvegházhatás-fokozódás és a globális felmelegedés jelenségét!", "correct_answer": "Az üvegházhatáson alapuló globális felmelegedés a földi légkör átlag hőmérsékletének az utóbbi években felgyorsuló növekedése. A szélsőséges időjárási jelenségek valószínűsége fokozódik.", "topic": ""}
+{"question": "Mekkora a hűtőközeg fajlagos gőztartalma a logp-h diagram jobboldali határgörbéje mentén?", "correct_answer": "x=1", "topic": ""}
+{"question": "Mekkora a jól kiválasztott tiszta folyadékszűrő ellenállása?", "correct_answer": "0,07…0,14 bar", "topic": ""}
+{"question": "Mekkora a tömörségi próbanyomás?", "correct_answer": "Az MSz EN-378 sz. szabvány szerint legalább az adott hűtőközeg várható legnagyobb, azaz \"méretezési\" hőmérsékletéhez tartozó telítési nyomása kell hogy legyen.", "topic": ""}
+{"question": "Mekkora az izobután üvegházhatást kiváltó értéke a CO2-hoz viszonyítva?", "correct_answer": "3", "topic": ""}
+{"question": "Mekkora az összeszerelt hűtőberendezésre vonatkozó szilárdsági nyomás és ki hajtja végre a nyomáspróbát?", "correct_answer": "Az MSz EN-378-2 sz. szabványban megadott érték és a képesített szerelő hajtja végre a nyomáspróbát.", "topic": ""}
+{"question": "Mekkora az propán üvegházhatást kiváltó értéke a CO2-hoz viszonyítva?", "correct_answer": "3", "topic": ""}
+{"question": "Mekkora az R 1234yf üvegházhatást kiváltó értéke a CO2-hoz viszonyítva?", "correct_answer": "0.5", "topic": ""}
+{"question": "Mekkora az R 1234ze üvegházhatást kiváltó értéke a CO2-hoz viszonyítva?", "correct_answer": "1.37", "topic": ""}
+{"question": "Mekkora az R134a üvegházhatást kiváltó értéke a CO2-hoz viszonyítva?", "correct_answer": "1430", "topic": ""}
+{"question": "Mekkora az R32 üvegházhatást kiváltó értéke a CO2-hoz viszonyítva?", "correct_answer": "675", "topic": ""}
+{"question": "Mekkora az R744 üvegházhatást kiváltó értéke a CO2-hoz viszonyítva?", "correct_answer": "1", "topic": ""}
+{"question": "Mekkora értékre célszerű állítani egy kétállású hőmérséklet szabályozó kapcsolási differenciáját, amely a hűtőkompresszort kapcsolja?", "correct_answer": "Kapcsolási differenciát úgy kell beállítani, hogy a hőmérséklet szabályozás lengése ne legyen elfogadhatatlanul nagy, valamint a kompresszor kapcsolási száma ne legyen több a gyártó által engedélyezettnél.", "topic": ""}
+{"question": "Mely elem nem alapvető tartozéka a hűtőkörfolyamatnak?", "correct_answer": "A presszosztát.", "topic": ""}
+{"question": "Mely hűtőközeg gyúlékony?", "correct_answer": "R290", "topic": ""}
+{"question": "Mely technikai elemben történik az utóhűtés?", "correct_answer": "Kondenzátorban.", "topic": ""}
+{"question": "Melyek a hűtőkörfolyamat fő alkotó elemei?", "correct_answer": "Kompresszor, adagoló.", "topic": ""}
+{"question": "Melyek a kisteljesítményű hűtőaggregát alapvető részei?", "correct_answer": "Kompresszor, kondenzátor, adagolószerv, elpárologtató. Alternatív válasz: .", "topic": ""}
+{"question": "Melyek a klórmentes hűtőközeges rendszerek kenőolajai?", "correct_answer": "Polialkilénglikol (PAG), poliolészterolaj (POE).", "topic": ""}
+{"question": "Melyek a klórtartalmú hűtőközeges rendszerek kenőolajai?", "correct_answer": "Ásványolaj (MO), Alkilbenzol (AB), félszintetikus olaj (MO/AB).", "topic": ""}
+{"question": "Melyek a mérőműszer kiválasztásának főbb szempontjai?", "correct_answer": "A mérendő fizikai mennyiség fajtája, a műszer osztálypontossága, a műszer méréshatára, a műszer hőmérsékleti tartománya, biztonságtechnikai követelmény (pl. A villamos méréseknél a műszer átütési feszültsége), használati mód.", "topic": ""}
+{"question": "Melyek a természetes közegek, amelyeknek a kondenzátor a hőenergiát leadja?", "correct_answer": "Víz és a levegő.", "topic": ""}
+{"question": "Melyek a természetes utóhűtő közegek?", "correct_answer": "Levegő és víz.", "topic": ""}
+{"question": "Melyek az alapvető mérési módszerek ?", "correct_answer": "Közvetlen - amikor a műszer kijelzőjén a mért érték azonnal leolvasható -, közvetett - amikor kettő vagy ennél több mért értékből állapítható meg számítással a keresett érték.", "topic": ""}
+{"question": "Melyek az állásos szabályozók?", "correct_answer": "Hőmérséklet- és nyomásszabályozók", "topic": ""}
+{"question": "Melyek az előszerelt \"csoportaggregát\" főbb előnyei?", "correct_answer": "Csökken a helyszíni szerelés igénye, ezzel a hibalehetőségek is, továbbá jobbak a teljesítmény szabályozási lehetőségek, valamint nagyobb az üzembiztonság.", "topic": ""}
+{"question": "Melyek az MSz EN-378 sz. szabványban előírt legfontosabb dokumentumok a telepített hűtőberendezésekre vonatkozóan?", "correct_answer": "A Berendezés Gépkönyv, az Esemény Napló, a Tömörségellenőrzési és Szivárgásvizsgálati Jegyzőkönyv, a Hűtőközeg Kezelését Nyomon követő Jegyzőkönyv.", "topic": ""}
+{"question": "Melyek az ún. fluortartalmú üvegházhatású gázok?", "correct_answer": "Fluorozott szénhidrogének, perfluor-karbonok, kén-hexafluorid és egyéb, fluort tartalmazó üvegházhatású gázok.", "topic": ""}
+{"question": "Melyek az ún. vákuumoló- töltőkészülékek fő elemei?", "correct_answer": "Vákuumszivattyú, töltőhenger, elosztóblokk, mérőműszerek, szabályozó- és védelmi berendezések.", "topic": ""}
+{"question": "Melyik \"idegen\" anyag jelenti a legnagyobb problémát a kompresszoros hűtőberendezésekben?", "correct_answer": "A legnagyobb problémát a levegővel vagy más úton bekerült víz jelenti, amely vagy szabad víz formájában vagy a hűtőközegben és az olajban oldva, esetleg a szerkezeti elemekben sejtnedvességként megkötve lehet jelen.", "topic": ""}
+{"question": "Melyik a folyadékvezeték elágazás helyes kialakítása és miért?", "correct_answer": "Az esetleges gázrész egyenlően osztódjon el.", "topic": ""}
+{"question": "Melyik a klórmentes hűtőközeg?", "correct_answer": "R 134a.", "topic": ""}
+{"question": "Melyik a klórmentes hűtőközeg?", "correct_answer": "R 407C.", "topic": ""}
+{"question": "Melyik a klórmentes hűtőközeg?", "correct_answer": "R 32.", "topic": ""}
+{"question": "Melyik a klórmentes hűtőközeg?", "correct_answer": "R 600a.", "topic": ""}
+{"question": "Melyik a klórmentes hűtőközeg?", "correct_answer": "R 744", "topic": ""}
+{"question": "Melyik a legismertebb és legkomplettebb egyik előszerelt egység a hűtő-és klímatechnikában és miért terjedt el?", "correct_answer": "A \"csoportaggregát\"-nak nevezett gépcsoport, amely megoldás azért terjedt el, mert célszerű a hűtőberendezéseket nem egyetlen nagyteljesítményű kompresszorral, hanem több, párhuzamosan kapcsolt kisebb egységgel üzemeltetni.", "topic": ""}
+{"question": "Melyik a részlegesen halogénezett hűtőközeg?", "correct_answer": "R 22", "topic": ""}
+{"question": "Melyik a teljesen halogénezett hűtőközeg?", "correct_answer": "R 12", "topic": ""}
+{"question": "Melyik szabvány ad általános utasításokat a hűtőkör telepítésére, a telepítési helyek kiválasztására?", "correct_answer": "Az MSz EN-378-1 sz. Szabvány 4.1 pontja előírja: a hűtőrendszereket ezen szabvány szerint kell tervezni, gyártani, telepíteni, üzemeltetni és ártalmatlanítani.", "topic": ""}
+{"question": "Melyik szerves hűtőközeg?", "correct_answer": "R 600a", "topic": ""}
+{"question": "Melyik szivárgáskereső készülék szenzorának élettartama a leghosszabb?", "correct_answer": "A félvezető szenzorosé.", "topic": ""}
+{"question": "Melyik technikai elemekben történik a természetes közegekkel történő utóhűtés?", "correct_answer": "Kondenzátorban és vízzel hűtött külön utóhűtőben.", "topic": ""}
+{"question": "Melyik üzemelési paraméter megváltozásából következtethetünk a hűtőberendezés rendellenes működésére?", "correct_answer": "A hűtőkompresszor nyomócsövének hőmérsékletváltozásából. A túlhevítési hőmérséklet az az üzemi paraméter, amelyik leggyorsabban jelzi a berendezés rendellenes működését.", "topic": ""}
+{"question": "Mi az adagoló másodlagos feladata?", "correct_answer": "Megfelelő hűtőközeg mennyiséget biztosít az elpárologtatónak.", "topic": ""}
+{"question": "Mi a csővezetéki rezgéselnyelők szerepe?", "correct_answer": "Az üzemi rezgések (kompresszorrezonanciák) továbbterjedésének megakadályozása.", "topic": ""}
+{"question": "Mi a fajtérfogat mértékegysége?", "correct_answer": "m3/kg", "topic": ""}
+{"question": "Mi a feladata a motorvédő hőrelének a villamos áramkörben?", "correct_answer": "A motor túlterhelés elleni védelmét látja el. A névleges áramfelvételt meghaladó áram felett a káros túlmelegedés megakadályozására a fogyasztót lekapcsolja.", "topic": ""}
+{"question": "Mi a feladata és célja a szívónyomás szabályzó szelep beépítésének (ha van ilyen beépítve) a hűtőaggregát működésében?", "correct_answer": "Szívónyomás szabályzó szelep feladata a kompresszor szívócsövében uralkodó nyomás túlzott mértékű megemelkedésének megakadályozása. Célja a hűtőkompresszor túlterhelésének megakadályozása a hirtelen megnövekvő elpárolgási nyomás miatt.", "topic": ""}
+{"question": "Mi a feladata és célja az elpárolgási nyomást szabályzóknak (ha be van építve)?", "correct_answer": "Az elpárolgási nyomás túlzott mértékű csökkenésének megakadályozása abból a célból, hogy a léghűtő túlzott deresedését és lehűlését megakadályozzák és ezáltal a szállított árut a kiszáradástól megvédjék.", "topic": ""}
+{"question": "Mi a finomvákuum mérők mértékegysége?", "correct_answer": "mbar", "topic": ""}
+{"question": "Mi a folyadékáramlás és nedvességjelzők szerepe?", "correct_answer": "Folyadékellátás folytonosságának és a hűtőközeg nedvesség állapotának jelzése.", "topic": ""}
+{"question": "Mi a folytonos szabályozó?", "correct_answer": "Amelynek beavatkozó jellemzője a beavatkozás tartományán belül bármely értéket felvehet.", "topic": ""}
+{"question": "Mi a funkciója az elpárologtató után beépített folyadékleválasztónak?", "correct_answer": "Az, hogy a kompresszor szívócsonkjához tisztán gőz halmazállapotú hűtőközeg kerüljön.", "topic": ""}
+{"question": "Mi a hűtőberendezésre vonatkozó legnagyobb megengedett nyomás?", "correct_answer": "Az MSz EN-378-2 sz. szabványban megadott érték.", "topic": ""}
+{"question": "Mi a javasolt eljárás izobutános hűtőszekrény vákuumozásakor?", "correct_answer": "Kétoldali vákuumozás járó kompresszor mellett.", "topic": ""}
+{"question": "Mi a jelentősége az ún. \"közbenső öblítéses\" vákuumolási eljárásnak?", "correct_answer": "El lehet érni, hogy ezzel a felhígítással minden \"idegen\", károsodást okozó komponens saját résznyomása a károsodást már nem okozó érték alá csökkenjen.", "topic": ""}
+{"question": "Mi a kétállású szabályozó?", "correct_answer": "Amelynek beavatkozó jellemzője csak 2 értéket (pl. 0 és 100%) vehet fel.", "topic": ""}
+{"question": "Mi a kompresszor feladata?", "correct_answer": "A hőterhelés hatására az elpárologtatóban keletkezett gőz elszállítása és a kondenzációs energiaszintre emelése.", "topic": ""}
+{"question": "Mi a kompresszor másodlagos feladata?", "correct_answer": "Szállítja a hűtőközeget a körfolyamaton belül.", "topic": ""}
+{"question": "Mi a kompresszorban a folyadékütés?", "correct_answer": "Olajhab vagy nagy mennyiségű folyadék halmazállapotú hűtőközeg kerül a hengertérbe.", "topic": ""}
+{"question": "Mi a kondenzátor másodlagos feladata?", "correct_answer": "Leadja környezetének az elpárologtatóban felvett hőtartalmat.", "topic": ""}
+{"question": "Mi a legfőbb erénye az izobutános hűtőkörök javításánál a Lokring csőkötéseknek?", "correct_answer": "Hőközlés nélkül elkészíthető, nem tűzveszélyes.", "topic": ""}
+{"question": "Mi a léghűtő feladata?", "correct_answer": "Zárt légtérben előírt hőmérséklet előállítása, tartása.", "topic": ""}
+{"question": "Mi a MOP?", "correct_answer": "Gáztöltetű érzékelővel ellátott termosztatikus adagolószelepek nyomáshatároló szerepet betöltő töltetű érzékelő.", "topic": ""}
+{"question": "Mi a nagynyomású folyadékgyűjtő tartály másodlagos feladata?", "correct_answer": "Az érvényes rendeletek, szabványok által megengedett esetleges hűtőközeg szökést kompenzáló átmeneti tartalékot tartalmazza.", "topic": ""}
+{"question": "Mi a nyomás mértékegysége?", "correct_answer": "bar", "topic": ""}
+{"question": "Mi a nyomástartási próba?", "correct_answer": "A nagynyomású száraz nitrogénnel feltöltött rendszert a szilárdsági nyomáspróba után célszerűen pl. 16…24 órán keresztül nyomáson tartjuk.", "topic": ""}
+{"question": "Mi a Schrader-szelep kiszedő szerepe az üzembe helyezés során?", "correct_answer": "Megszünteti a szeleptest okozta szűkületet a vákuumolásnál, és biztonságos lecsatlakozást tesz lehetővé.", "topic": ""}
+{"question": "Mi a segédenergia nélküli szabályozó?", "correct_answer": "Az érzékelő képes a beavatkozáshoz szükséges energia szolgáltatására (pl. csőmembrános nyomásérzékelők, bimetall-hőmérsékletérzékelők).", "topic": ""}
+{"question": "Mi a segédenergiával működő szabályozó?", "correct_answer": "Ha az érzékelő által szolgáltatott energia nem elegendő a beavatkozó szerv működtetéséhez, akkor segédenergiát kell alkalmazni (pl. villamos energia, bizonyos nyomású olaj vagy hűtőközeg).", "topic": ""}
+{"question": "Mi a sűrűség SI szerinti mértékegysége?", "correct_answer": "kg/m3", "topic": ""}
+{"question": "Mi a szabályozás általában?", "correct_answer": "Az adott paraméternek a parancsolt értéktől való eltérésének irányával ellentétes irányban történő zárt láncú beavatkozás.", "topic": ""}
+{"question": "Mi a szabályozás és a vezérlés közötti eltérés?", "correct_answer": "A szabályozás egy meghatározott jellemző mérése, összehasonlítása a kívánt értékkel, és egy ennek megfelelő beavatkozás végrehajtása, azaz egy zárt folyamat. A vezérlés egy meghatározott beavatkozás megtétele.", "topic": ""}
+{"question": "Mi a szabályozó berendezés?", "correct_answer": "Különböző feladatokat ellátó szerkezeti elemek láncolata, amelyben mindegyik elem egy belépő jelet valamilyen módon megváltoztatott jellé alakít át.", "topic": ""}
+{"question": "Mi a szén-dioxid jellölése?", "correct_answer": "R 744", "topic": ""}
+{"question": "Mi a szerelő elsődleges feladata a kondenzátor üzemeltetése során?", "correct_answer": "A rendszeres, mindenre kiterjedő ellenőrzés, karbantartás, a hőátadó felület tisztántartása.", "topic": ""}
+{"question": "Mi a szerelő elsődleges feladata az elpárologtató üzemeltetése során?", "correct_answer": "A rendszeres ellenőrzés, a hőterhelésnek megfelelő mennyiségű hűtőközeg folyadék biztosítása, a karbantartás, a hőátadó felület minél tisztábban tartása.", "topic": ""}
+{"question": "Mi a szerepe a \"karterfűtésnek\"?", "correct_answer": "A hűtőközeg kipárologtatása az olajból és a kenőképesség növelése.", "topic": ""}
+{"question": "Mi a szerepe a nyomásszabályzónak a vízhűtéses kondenzátorhoz?", "correct_answer": "Kondenzátornyomást szabályozza.", "topic": ""}
+{"question": "Mi a szervomotor vagy végrehajtó motor?", "correct_answer": "Az a berendezés, amely a segédenergia segítségével a beavatkozó szervet mozgatja.", "topic": ""}
+{"question": "Mi a szívó és nyomó vezetékben megengedett legnagyobb nyomásesés K-ben? Miért?", "correct_answer": "1…2 K-nél nagyobb nyomásesés csökkenő hűtőteljesítményt eredményez, ami nagyobb kompresszort tehet szükségessé, nagyobb energia fogyasztással.", "topic": ""}
+{"question": "Mi a visszacsapó szelep feladata a hűtőkörben?", "correct_answer": "Közegáramlás egyirányúsítása, és másik irányba való tökéletes lezárása.", "topic": ""}
+{"question": "Mi a visszanyerés fogalma?", "correct_answer": "Termékekből – ideértve a tartályokat is – és berendezésekből származó fluortartalmú üvegházhatású gázok összegyűjtése és tárolása a termékek vagy berendezések karbantartása vagy szervizelése során, illetve azok ártalmatlanítását megelőzően.", "topic": ""}
+{"question": "Mi ábrázolja a kondenzációs hőleadást a logp-h diagramban?", "correct_answer": "A két határgörbe közti vízszintes szakasz.", "topic": ""}
+{"question": "Mi ábrázolja a párolgáshőt a logp-h diagramban?", "correct_answer": "A két határgörbe közti vízszintes szakasz.", "topic": ""}
+{"question": "Mi az a globális felmelegedési potenciál?", "correct_answer": "GWP", "topic": ""}
+{"question": "Mi az a regenerálás?", "correct_answer": "A visszanyert, fluortartalmú üvegházhatású gáz oly módon való újrafeldolgozása, hogy a tervezett felhasználásra tekintettel a gáz ugyanolyan tulajdonságokkal rendelkezzen a teljesítményszintet illetően, mint egy gyári új anyag.", "topic": ""}
+{"question": "Mi az alapvető különbség a szabályozás és a vezérlés között?", "correct_answer": "A szabályozás zárt hatásláncú, míg a vezérlés nyílt láncon hat: azaz nincs visszacsatolás.", "topic": ""}
+{"question": "Mi az ammónia jellölése?", "correct_answer": "R 717", "topic": ""}
+{"question": "Mi az ammónia vegyjele?", "correct_answer": "NH3", "topic": ""}
+{"question": "Mi az az újrahasznosítás?", "correct_answer": "A visszanyert, fluortartalmú üvegházhatású gázoknak az alapvető tisztítást követő újrafelhasználása.", "topic": ""}
+{"question": "Mi az előnye a zárt olajbetöltési technológiának?", "correct_answer": "A betöltendő olaj vagy egyáltalán nem, vagy csak a lehető legrövidebb ideig érintkezhet a környezettel, tehát a szennyeződése elkerülhető.", "topic": ""}
+{"question": "Mi az elpárologtató feladata?", "correct_answer": "A benne áramló hűtőközeg által a hűtendő közegbe beáramló felesleges hőenergiát belőle felvegye és elszállítsa.", "topic": ""}
+{"question": "Mi az izobután vegyjele?", "correct_answer": "C4H10", "topic": ""}
+{"question": "Mi az ózon?", "correct_answer": "Háromatomos oxigén molekula", "topic": ""}
+{"question": "Mi az összefüggés a sűrűség és a fajtérfogat között?", "correct_answer": "a sűrűség és fajtérfogat egymás reciproka", "topic": ""}
+{"question": "Mi az üzempróba?", "correct_answer": "Az üzempróba a hűtőberendezés és a hozzá kapcsolódó külső rendszerek (pl. hűtővíz-rendszer, hűtöttvíz-rendszer, hűtött levegő-rendszer) működőképességének ellenőrzésére szolgál.", "topic": ""}
+{"question": "Mi hűti a hermetikus kompresszorok villamos betétmotorját?", "correct_answer": "A szívott hűtőközeg-gőz és a szóróolajozás együttesen.", "topic": ""}
+{"question": "Mi szükséges feltétele annak, hogy a\"szabad\" vizet vákuumolással el lehessen távolítani (hűtőberendezésből, palackból)?", "correct_answer": "Ha a vákuumolással előállított abszolút nyomás mindig kisebb lesz, mint a berendezésben lévő víz éppen meglévő hőmérsékletéhez tartozó telítési vízgőznyomás.", "topic": ""}
+{"question": "Miért előnyös a kondenzálódott hűtőközeget utóhűteni?", "correct_answer": "Azért, hogy a kondenzátor és az adagoló szerv közötti nyomásesés miatt is tisztán folyadék kerüljön az adagoló szervhez.", "topic": ""}
+{"question": "Miért és hogyan kell különleges gondossággal kezelni az észterolajokat?", "correct_answer": "Mert erősen higroszkóposak, ezért a levegőtől elzárva kell kezelni.", "topic": ""}
+{"question": "Miért hasznos szabályozni a kompresszorok hűtőteljesítményét?", "correct_answer": "Mert a hűtőteljesítmény igény az üzemi körülményektől függően változik.", "topic": ""}
+{"question": "Miért károsak a kompresszoros hűtőberendezések belsejében a hűtőközegen és a kenőolajon kívüli egyéb \"idegen\" anyagok?", "correct_answer": "Az \"idegen\" anyagok üzemelés közben káros vegyi folyamatokat generálhatnak, növelhetik a kondenzációs nyomást és vele a hőmérsékleteket is.", "topic": ""}
+{"question": "Miért kell a deret vagy jeget eltávolítani az elpárologtató felületéről?", "correct_answer": "Mert rontja a hőátbocsátást, csökkenti a hűtőteljesítményt.", "topic": ""}
+{"question": "Miért kell a karterfűtés?", "correct_answer": "Megakadályozza az olaj hűtőközeggel történő feldúsulását és ezzel megakadályozza a folyadékütést.", "topic": ""}
+{"question": "Miért kell elszívni a hűtőközeg gőzt az elpárologtatóból?", "correct_answer": "Hogy folyamatosan biztosítani lehessen a párolgást.", "topic": ""}
+{"question": "Miért kell járatni vagy megrázni vákuumolás közben az izobutános kompresszort?", "correct_answer": "Mert álló kompresszor mellett az izobután nagy része elnyelődik az olajban", "topic": ""}
+{"question": "Miért szükséges nyitott kompresszornál a jó tengelytömítés?", "correct_answer": "Meg kell akadályozni, hogy a levegő a kompresszorba bejuthasson és hogy a hűtőközeg a kompresszorból kijuthasson.", "topic": ""}
+{"question": "Mikor és hogyan célszerű a hűtőgépolajat a hűtőberendezésbe betölteni?", "correct_answer": "Célszerű a vákuum hatását kihasználva a kompresszorba beszívatni, vagy speciális olajpumpával bejuttatni a kompresszor álló helyzetében.", "topic": ""}
+{"question": "Mikor használható a hűtött tér levegője a léghűtőre rakódott dér leolvasztására?", "correct_answer": "Ha a hűtött térben tartandó hőmérséklet +2°C-nál magasabb.", "topic": ""}
+{"question": "Mikor keletkezik dér vagy jég az elpárologtató felületén?", "correct_answer": "Léghűtő elpárologtatók felületén akkor, ha a hűtőfelület hőmérséklete 0 Celsius foknál kisebb, folyadékhűtő elpárologtatók felületén akkor, ha a felület hőmérséklete kisebb, mint a hűtött folyadék fagyáspontja.", "topic": ""}
+{"question": "Mikor kell ellenőrizni az olajszintet a kompresszorban?", "correct_answer": "Tartós üzemelés után, amikor már beállt az egyensúlyi állapot.", "topic": ""}
+{"question": "Mikor kell elvégezni a hűtőberendezés szilárdsági nyomáspróbáját?", "correct_answer": "A nagynyomású tömörségi nyomáspróbával egy időben.", "topic": ""}
+{"question": "Mikor lehet a deret vagy jeget a hűtött közeg hőenergiájával leolvasztani?", "correct_answer": "Akkor, ha a hűtött közeg hőmérséklete nagyobb, mint a dér vagy jég olvadási hőmérséklete.", "topic": ""}
+{"question": "Mikor szabad a hűtőberendezést hűtőközeggel feltölteni?", "correct_answer": "Akkor, ha az előzetes, hűtőközeg nélküli tömörségi vizsgálatok, azaz a nagynyomású- és vákuumtartási próbák sikeres eredménnyel zárultak.", "topic": ""}
+{"question": "Mikor tekinthető egy zárt térfogat elvileg tömörnek?", "correct_answer": "Ha a nagynyomású vizsgálógázzal feltöltött zárt térfogatból a vizsgálati időpont technikai szintjén lehetséges legérzékenyebb műszerrel vagy eljárással sem lehet a vizsgálógáz szivárgását kimutatni.", "topic": ""}
+{"question": "Mikor tekintünk egy zárt térfogatot technikailag tömörnek?", "correct_answer": "Ha a nagynyomású vizsgálógázzal feltöltött zárt térfogatból egy egyezményesen elfogadott érzékenységű műszerrel vagy eljárással nem lehet a vizsgáló gáz szivárgását kimutatni.", "topic": ""}
+{"question": "Milyen a hűtőközeg állapota, ha az indikátoros áramlásjelző színe: sárga?", "correct_answer": "nedves", "topic": ""}
+{"question": "Milyen a hűtőközeg állapota ha az indikátoros áramlásjelző színe: zöld?", "correct_answer": "száraz", "topic": ""}
+{"question": "Milyen adszorpciós szűrőanyagokat ismer?", "correct_answer": "Szilikagél, Molekulaszűrő", "topic": ""}
+{"question": "Milyen állásos szabályozókat használunk a hűtéstechnikai berendezéseknél ?", "correct_answer": "Segédenergiával és segédenergia nélkül működő két és több állású szabályozó termosztátokat és presszosztátokat alkalmazunk.", "topic": ""}
+{"question": "Milyen anyaggal végezzük a tömörségi nyomáspróbát?", "correct_answer": "N2", "topic": ""}
+{"question": "Milyen csavarkompresszor típusokat ismer?", "correct_answer": "Kétrotoros, egycsavaros-kompresszor.", "topic": ""}
+{"question": "Milyen elven működik az infravörös érzékelővel működő szivárgáskereső?", "correct_answer": "Ha hűtőközeg kerül a gázmintába, az az infravörös sugarak egy részét elnyeli.", "topic": ""}
+{"question": "Milyen érzékenységű kézi szivárgáskeresőre van szükség ahhoz, hogy a rendeletben előírt követelményeknek eleget tegyünk?", "correct_answer": "5 g/év, vagy annál kisebb érzékenységű", "topic": ""}
+{"question": "Milyen feladatok(ka)t kell ellátni a hűtőgép olajnak?", "correct_answer": "A kompresszor csapágyainak és csúszó felületeinek kenése, valamint a kompresszor belső hűtése a kompresszor házra történő hőszállítással.", "topic": ""}
+{"question": "Milyen fizikai folyamat játszódik le a kondenzátorban?", "correct_answer": "A kompresszortól érkező túlhevített hűtőközeg gőzt lehűti, kondenzálja és kis mértékben utóhűti.", "topic": ""}
+{"question": "Milyen fizikai folyamat játszódik le az elpárologtatóban?", "correct_answer": "Az adagoló szervtől érkező folyadék halmazállapotú hűtőközeget elpárologtatja és kis mértékben túlhevíti.", "topic": ""}
+{"question": "Milyen folytonos szabályozókat alkalmazunk a hűtéstechnikában ?", "correct_answer": "Elpárolgási nyomás, a szívó nyomás, a kondenzátor nyomás szabályozókat.", "topic": ""}
+{"question": "Milyen gép a hűtőkompresszor?", "correct_answer": "Térfogatot szállító gép.", "topic": ""}
+{"question": "Milyen halmazállapot van a logp-h diagram görbéjén belül?", "correct_answer": "Vegyes.", "topic": ""}
+{"question": "Milyen halmazállapot van a logp-h diagram görbéjén kívül a bal oldalon?", "correct_answer": "Folyadék.", "topic": ""}
+{"question": "Milyen halmazállapot van a logp-h diagram görbéjén kívül a jobb oldalon?", "correct_answer": "Gőz.", "topic": ""}
+{"question": "Milyen halmazállapotban célszerű betölteni az R600a hűtőközeget?", "correct_answer": "Folyékony.", "topic": ""}
+{"question": "Milyen hűtőberendezésben kell nedvességszűrőt alkalmazni?", "correct_answer": "Fluorozott hűtőközegű hűtőberendezésben.", "topic": ""}
+{"question": "Milyen hűtőberendezések szivárgását kötelező telepített szivárgásérzékelővel, folyamatosan ellenőrizni?", "correct_answer": "Amelyek hűtőközeg töltete legalább 500 tonna CO2 egyenértékkel rendelkezik.", "topic": ""}
+{"question": "Milyen hűtőközegeket szabad csak folyadék halmazállapotban betölteni a hűtőberendezésbe és miért?", "correct_answer": "A zeotrop keverék/blend hűtőközegeket.", "topic": ""}
+{"question": "Milyen hűtőközegeket szabad gőz halmazállapotban is betölteni egy hűtőberendezésbe vagy egy tartályba és miért?", "correct_answer": "Az azeotrop hűtőközegeket.", "topic": ""}
+{"question": "Milyen indító- és védőegységgel rendelkezik egy izobutános kompresszor?", "correct_answer": "PTC és tokozott klixon.", "topic": ""}
+{"question": "Milyen kémiai anyagok közé tartozik a propán?", "correct_answer": "Szénhidrogén származék.", "topic": ""}
+{"question": "Milyen kémiai anyagok közé tartozik az izobután?", "correct_answer": "Szénhidrogén származék", "topic": ""}
+{"question": "Milyen kémiai anyagok közé tartozik az R1234yf?", "correct_answer": "HFO", "topic": ""}
+{"question": "Milyen kémiai anyagok közé tartozik az R1234ze?", "correct_answer": "HFO", "topic": ""}
+{"question": "Milyen közegeket nevezünk „blendek”-nek?", "correct_answer": "A különböző hűtőközeg által alkotott keverékeket.", "topic": ""}
+{"question": "Milyen külön előírások vonatkoznak a nyomástartályra?", "correct_answer": "Nagyobb az MSz EN-378-2 sz.szabvány 2.sz. táblázatában megadott szilárdsági próbanyomása, mint a rendszer többi, szerelt egységének szilárdsági próbanyomása és a tartályt biztonsági lefúvató elemmel kell ellátni.", "topic": ""}
+{"question": "Milyen leolvasztási módokat ismer?", "correct_answer": "Leolvasztás folyadékkal, elektromos energiával, meleggázzal, keringtetett levegővel.", "topic": ""}
+{"question": "Milyen lökettérfogattal rendelkezik egy izobutános kompresszor az ugyanolyan teljesítményű R134a-shoz képest?", "correct_answer": "Kb. kétszeres.", "topic": ""}
+{"question": "Milyen nyomással kell elvégezni a tömörségi nyomáspróbát?", "correct_answer": "A tervezési nyomással.", "topic": ""}
+{"question": "Milyen paramétereket kell figyelembe venni a nedvesség vagy savszűrők kiválasztásánál?", "correct_answer": "Hűtőközegfajta, hűtőközeg állapota, rendszer mérete.", "topic": ""}
+{"question": "Milyen paraméterekkel rendelkező vákuumszivattyúra van szükség a képesített cégeknek?", "correct_answer": "A vákuumolandó hűtőberendezés nagyságához megfelelő teljesítményű, legalább 0,05 mbar abszolút nyomás előállítására alkalmas kétfokozatú vákuumszivattyúra van szükség.", "topic": ""}
+{"question": "Milyen problémát okoz az olaj savassága?", "correct_answer": "Lemarja a villamos motor huzaljáról a zománcréteget, menetzárlat, majd testzárlat keletkezik és a kompresszor \"leég\"(BURN-OUT-jelenség).", "topic": ""}
+{"question": "Milyen prospektus adat jellemzi a hűtőkompresszor szállítóteljesítményét?", "correct_answer": "Az óránkénti elméleti lökettérfogat.", "topic": ""}
+{"question": "Milyen természetes légáramoltatású léghűtőket ismer?", "correct_answer": "Csőjáratos lemez-elpárologtatók, simacsöves léghűtők, felületnövelő bordázattal ellátott léghűtők.", "topic": ""}
+{"question": "Milyen védelmi feladatok ellátására alkalmas elemeket használunk a hűtőberendezéseknél ?", "correct_answer": "Hőmérséklet, nyomás határolására szolgáló termosztátok és presszosztátok alsó vagy felső érték korlátozása céljából.", "topic": ""}
+{"question": "Milyen vegyületek bontják az ózonréteget?", "correct_answer": "A klórt tartalmazó szénhidrogén alapú gázok (CFC és HCFC anyagok)", "topic": ""}
+{"question": "Milyen vízhűtéses kondenzátorokat ismer?", "correct_answer": "Csőkígyós kondenzátor, kettőscsövű kondenzátor, koaxális kondenzátor, csőköteges kondenzátor, hűtőtorony, evaporatív kondenzátor.", "topic": ""}
+{"question": "Minek alapján történik a hűtőközegek veszélyességi osztályokba történő besorolása?", "correct_answer": "A hűtőközeg gyúlékonysága és mérgező hatása szerint.", "topic": ""}
+{"question": "Mire használjuk a presszosztátokat?", "correct_answer": "Nyomás hatására kapcsolásra.", "topic": ""}
+{"question": "Mire használjuk a termosztátokat?", "correct_answer": "Hőmérséklet szabályozásra.", "topic": ""}
+{"question": "Mire szolgál a szilárdsági nyomáspróba?", "correct_answer": "Annak eldöntésére, hogy a hűtőrendszer szilárdságilag és tömörségi szempontból alkalmas-e a vele szemben támasztott követelmények kielégítésére.", "topic": ""}
+{"question": "Mire szolgál a szívóoldali szűrő?", "correct_answer": "Kiterjedt rendszerekben a szennyeződés, reszelék, forraszanyag, nedvesség leválasztására.", "topic": ""}
+{"question": "Mire szolgál a vákuumszivattyúk gázballasztszelepe?", "correct_answer": "Az elszívott gázban lévő vízgőz kondenzációjának megakadályozására", "topic": ""}
+{"question": "Mire szolgál zárt rendszerű folyadékhűtőknél a tágulási tartály?", "correct_answer": "Fölveszi a rendszerben levő folyadék térfogatváltozását.", "topic": ""}
+{"question": "Miről kell gondoskodni az elpárologtató után beépített folyadékleválasztónál?", "correct_answer": "A benne összegyűlt folyadékot el kell párologtatni, az olajat pedig el kell szállítani.", "topic": ""}
+{"question": "Mit \"eredményez\" az elszennyeződött kondenzátor felület?", "correct_answer": "Megnő a nyomó oldali nyomás.", "topic": ""}
+{"question": "Mit ábrázol a logp-h diagramban a jobboldali határgörbe?", "correct_answer": "A telített gőzállapotokat", "topic": ""}
+{"question": "Mit értünk az anyag fajtérfogatán?", "correct_answer": "Egységnyi tömegű anyag térfogatát.", "topic": ""}
+{"question": "Mit értünk az anyag sűrűségén?", "correct_answer": "Egységnyi térfogatú anyag tömegét.", "topic": ""}
+{"question": "Mit jelent a \"membrános tágulási tartály\" fogalom?", "correct_answer": "Egy gumilemez által két részre osztott tartály.", "topic": ""}
+{"question": "Mit jelent a helyhez kötött kifejezés a hűtéstechnikában?", "correct_answer": "Működés közben szokásos körülmények között nincs mozgásban, ideértve a hordozható beltéri légkondicionáló berendezéseket is.", "topic": ""}
+{"question": "Mit jelent a hűtőpótkocsi kifejezés a hűtéstechnikában?", "correct_answer": "Kamion vagy vontató általi vontatásra, elsősorban áruszállításra tervezett és gyártott, hűtőegységgel felszerelt jármű.", "topic": ""}
+{"question": "Mit jelent a kényszerolajozás?", "correct_answer": "A kompresszorban a kenőolajat olajszivattyú szállítja.", "topic": ""}
+{"question": "Mit jelent a kompresszor hűtőteljesítményének szabályozása?", "correct_answer": "A kompresszor lökettérfogatát meghatározó paraméterek közül az automatikusan is változtathatók (azaz a lökethossz, a fordulatszám és a működő hengerek száma) módosítása.", "topic": ""}
+{"question": "Mit jelent a mobil kifejezés a hűtéstechnikában?", "correct_answer": "Működés közben szokásos körülmények között mozgásban van.", "topic": ""}
+{"question": "Mit jelent a telepített szivárgásészlelő rendszer kifejezés a hűtéstechnikában?", "correct_answer": "Fluortartalmú üvegházhatású gázok szivárgását jelző telepített mechanikus, elektromos vagy elektronikus kalibrált rendszer, amely szivárgás észlelésekor riasztja az üzemeltetőt.", "topic": ""}
+{"question": "Mit jelent általában a hűtőkompresszor alkalmazási tartománya?", "correct_answer": "Milyen elpárolgási hőmérsékleten, milyen környezeti körülmények között és milyen nyomásviszonynál alkalmazható.", "topic": ""}
+{"question": "Mit jelent az F-gáz regenerálása?", "correct_answer": "A visszanyert fluortartalmú üvegházhatású gázok oly módon való újrafeldolgozását, hogy a (tervezett felhasználásra tekintettel) a gáz ugyanolyan tulajdonságokkal rendelkezzen mint a gyári új anyag.", "topic": ""}
+{"question": "Mit jelent az F-gáz visszanyerése?", "correct_answer": "A fluortartalmú üvegházhatású gázok tartályokból illetve berendezésekből történő összegyűjtése és tárolása azok karbantartása, szervizelése során vagy azok ártalmatlanítását megelőzően.", "topic": ""}
+{"question": "Mit jelent az Izotermikus hőfelvétel?", "correct_answer": "Az állandó, alacsony hőmérsékleten lejátszódó folyamat során a munkaközeg elpárolog és hőt von el a környezetétől, a hűtött közegtől.", "topic": ""}
+{"question": "Mit jelent az Izotermikus hőleadás?", "correct_answer": "A munkaközeg kondenzációja, állandó magas hőmérsékleten történő cseppfolyósítása.", "topic": ""}
+{"question": "Mit jelent az olajok kompatibilitása, azaz összeférhetősége?", "correct_answer": "A kompatibilis olajok kenőképessége összekeverve nem csökken.", "topic": ""}
+{"question": "Mit jelent az ún. \"közbenső öblítéses\" vákuumolási eljárás?", "correct_answer": "A vákuumolást célszerűen meghatározott időpontokban megszakítjuk, majd a rendszert száraz nitrogénnel közel légköri nyomásig feltöltjük és bizonyos ideig várunk.", "topic": ""}
+{"question": "Mit jelent az üvegházhatás?", "correct_answer": "A Föld légkörében található üvegházhatású gázok átengedik a rövid hullámhosszú napsugárzást, de elnyelik a Földről kisugárzott hosszú hullámhosszú infravörös hősugárzást.", "topic": ""}
+{"question": "Mit nevezünk „biztonsági hűtőközegnek”?", "correct_answer": "Ami nem mérgező, nem tűz- és robbanásveszélyes.", "topic": ""}
+{"question": "Mit nevezünk „zeotróp” blendeknek?", "correct_answer": "Két vagy több hűtőközeg keveréke, amelynek elpárolgásakor \"hőmérsékletcsúszás\" tapasztalható.", "topic": ""}
+{"question": "Mit nevezünk adagolóvezetéknek?", "correct_answer": "Az adagolószelep és az elpárologtató közötti vezetékszakaszt.", "topic": ""}
+{"question": "Mit nevezünk ártalmatlanításnak?", "correct_answer": "Az a folyamat, amelynek során az összes fluortartalmú üvegházhatású gázt vagy annak túlnyomó részét állandó jelleggel átalakítják vagy lebontják egy vagy több olyan stabil anyaggá, amely nem fluortartalmú üvegházhatású gáz.", "topic": ""}
+{"question": "Mit nevezünk folyadékvezetéknek?", "correct_answer": "Folyadékvezetéknek nevezzük általában azokat a csővezetékeket, amelyekben folyadék-fázisú hűtőközeg áramlik.", "topic": ""}
+{"question": "Mit nevezünk leolvasztó meleggáz-vezetéknek?", "correct_answer": "Nagynyomású folyadékgyűjtő vagy a nyomóvezeték és a léghűtő vagy más, leolvasztást igénylő készülék közötti csőszakaszt.", "topic": ""}
+{"question": "Mit nevezünk nyomóvezetéknek?", "correct_answer": "A kompresszor nyomócsonkja és a kondenzátor belépő csonkja közötti csőszakaszt.", "topic": ""}
+{"question": "Mit nevezünk szívóvezetéknek?", "correct_answer": "Szívóvezetéknek nevezzük az elpárologtató és a kompresszor szívócsonkja közötti csőszakaszt.", "topic": ""}
+{"question": "Mit okoz, ha a kondenzátort elhagyó levegő visszakeveredik a belépő légáramba?", "correct_answer": "A kondenzációs hőmérséklet megemelkedik.", "topic": ""}
+{"question": "Mit tanácsol az ügyfélnek a háztartási hűtőberendezések karbantartásával kapcsolatban?", "correct_answer": "A hűtőszekrény kondenzátorkörnyezetét szabadon kell hagyni és rendszeresen tisztítani kell.", "topic": ""}
+{"question": "Mit tanácsol az ügyfélnek a hűtőberendezések elhelyezésével kapcsolatban?", "correct_answer": "A hűtő- és fagyasztókészülék felállítására lehetőleg hűvös helyet válasszon ki .A magasabb környezeti hőmérséklet mindig megnövekedett energiaigényt is jelent.", "topic": ""}
+{"question": "Mitől függ a hidrosztatikai nyomás nagysága?", "correct_answer": "A folyadékoszlop magasságától és a folyadék sűrűségétől", "topic": ""}
+{"question": "Soroljon fel folyadékhűtő elpárologtató típusokat.", "correct_answer": "Lemezes elpárologtató, csőköteges elpárologtató, merített elpárologtató", "topic": ""}
+{"question": "Soroljon fel néhány típust a rézcső elzáró szerelvényekből!", "correct_answer": "Tömszelencés átmeneti elzárószelep, tömszelence nélküli átmeneti elzárószelep, kétüléses sarokszelep, mágnesszelep, visszacsapó szelep.", "topic": ""}
+{"question": "Szívószelep kitámasztásnak mi a szerepe?", "correct_answer": "Teljesítmény szabályozás.", "topic": ""}
+{"question": "Szükséges vagy káros a kompresszoros hűtőberendezések belső terében a megfelelő működéshez a hűtőközegen és a kenőolajon kívül más gáznemű vagy cseppfolyósítható közeg?", "correct_answer": "A hűtőközegen és a kenőolajon kívül minden más anyag \"idegen\" és káros.", "topic": ""}
+{"question": "Szükséges-e a kondenzátor teljesítményének szabályozása?", "correct_answer": "Igen, mert túl alacsony kondenzációs nyomás esetén az adagoló nem képes elegendő hűtőközeget juttatni az elpárologtatóba.", "topic": ""}
+{"question": "Szükséges-e a nyomó vezetéket szigetelni, és miért?", "correct_answer": "Elsősorban hőszivattyús rendszerben, a veszteség elkerülésére.", "topic": ""}
+{"question": "Termosztatikus adagolószelepek hőmérséklet-érzékelő töltetének típusai?", "correct_answer": "Folyadéktöltetű, gáztöltető, adszorpciós töltetű.", "topic": ""}
+{"question": "Termosztatikus adagolószelepek nyomáskiegyenlítésének módjai?", "correct_answer": "Belső nyomáskiegyenlítésű, külső nyomáskiegyenlítésű.", "topic": ""}
+{"question": "Üzemszünetben a kompresszor környezete hidegebb lehet a kondenzátorénál. Szükséges-e ezt figyelembe venni?", "correct_answer": "Igen. Visszacsapó szelep építendő be a nyomó vezetékbe valamint karterfűtést kell alkalmazni.", "topic": ""}
+{"question": "Vákuumozásnál hogyan lehet a tömítetlenség helyét egyszerű eszközökkel kimutatni?", "correct_answer": "Nem lehet.", "topic": ""}
+{"question": "Válassza ki a helyes állítást.", "correct_answer": "Az elpárologtatóban a elpárolgó folyadékfázisú hűtőközeg hőt von el a hűtendő közegből.", "topic": ""}
+{"question": "Válassza ki a helyes állítást.", "correct_answer": "A száraz rendszerű elpárologatóban a hűtőközeg csőben áramlik.", "topic": ""}
+{"question": "Válassza ki a helyes állítást.", "correct_answer": "Az elárasztott rendszerű elpárologtatóban az egész hőátadó felület jól nedvesített.", "topic": ""}
+{"question": "Válassza ki a helyes állítást.", "correct_answer": "A nyalábcsöves elpárologtatók egyaránt készülnek száraz és elárasztott rendszerű kivitelben.", "topic": ""}
+{"question": "Válassza ki a helyes állítást.", "correct_answer": "A levegőt hűtő elpárologtatók lehetnek száraz és elárasztott rendszerűek is.", "topic": ""}
+{"question": "Válassza ki a helyes állítást.", "correct_answer": "A csoportaggregát jobban szabályozható mint az egykompresszoros hűtőegység.", "topic": ""}
+{"question": "Válassza ki a helyes állítást.", "correct_answer": "A kompresszor a beszívott hűtőközeg gőzt mechanikai energia felhasználása árán magasabb energiaszintre hozza.", "topic": ""}
+{"question": "Válassza ki a helyes állítást.", "correct_answer": "A merülő-dugattyús kompresszor dugattyúja alternáló mozgást végez.", "topic": ""}
+{"question": "Válassza ki a helyes állítást.", "correct_answer": "A félhermetikus kompresszor burkolata nincs lehegesztve.", "topic": ""}
+{"question": "Válassza ki a helyes állítást.", "correct_answer": "A scroll kompresszorok a térfogat-kiszorítás elvén működnek.", "topic": ""}
+{"question": "Válassza ki a helyes állítást.", "correct_answer": "A kényszerolajozású kompresszorok jellemzően fel vannak szerelve olajnyomás kimaradása elleni védelemmel.", "topic": ""}
+{"question": "Válassza ki a helyes állítást.", "correct_answer": "A kondenzátor feladata az elpárologtatóban felvett hő és a kompressziómunka hőegyenértékének a természetes hűtőközegbe való leadása.", "topic": ""}
+{"question": "Válassza ki a helyes állítást.", "correct_answer": "A szívóvezetékbe épített folyadékleválasztó feladata megvédeni a kompresszort a folyadékütéstől.", "topic": ""}
+{"question": "Van-e jelenleg olyan eljárás vagy műszer, amellyel vákuum alatt álló berendezésnél ki lehet mutatni az esetleges tömítetlenség helyét?", "correct_answer": "A technika jelenlegi szintjén ismereteink szerint nincs.", "topic": ""}
+{"question": "0…100% szívóoldali hűtőteljesítmény szabályozás esetén milyen kiegészítő szabályozókat épít be?", "correct_answer": "Szívóoldali alsó nyomáshatároló szabályozót forrógáz visszavezetésre, termosztatikus szabályozó szelepet szívóoldali befecskendezésre.", "topic": ""}
+{"question": "A feszültség mentesítés megkezdése előtt mi a teendője a javítást vagy karbantartást végző szerelőnek ?", "correct_answer": "1. A kikapcsolást közölni kell az üzemeltető felelős ill. megbízott dolgozójával.2.közölni kell a kikapcsolás idejét és a lekapcsolt rész(ek) helyét.3.A kikapcsolást végző szolgálati minőségét. 4.meg kell nevezni a várható bekapcsolás idejét.5. Az áramtalanító főkapcsolót, biztosítékot biztosítani kell az illetéktelen bekapcsolás ellen.", "topic": ""}
+{"question": "A gáztér \"nyitvatartási\" idejét miért kell minimalizálni?", "correct_answer": "A légköri nedvesség felvétele, szennyeződések bejutása, mechanikai sérülések elkerülése érdekében.", "topic": ""}
+{"question": "A Klímagáz adatbázisban a hűtőkör tulajdonosa hogyan tudja a hűtőkör eladás esetén a berendezést az új tulajdonosnak átadni?", "correct_answer": "A Klímagáz adatbázisban a \"Berendezések\"/\"Saját berendezések\" menüpontban, az adott berendezés alapadati között az \"Eladás\" gombra kattintva adószám vagy név alapján a vállalkozás kereshető, még nem regisztrált vállalkozás és magánszemély esetén az adatok megadása szükséges.", "topic": ""}
+{"question": "A Klímagáz adatbázisban a hűtőkör tulajdonosa hogyan tudja a képesített vállalkozást megbízni a berendezés szivárgásvizsgálatával?", "correct_answer": "A Klímagáz adatbázisban a \"Berendezések\"/\"Saját berendezések\" menüpontban, az adott berendezés \"További adatok\" menüpontjában lehet a szerződött partner hozzárendelését megtenni.", "topic": ""}
+{"question": "A Klímagáz adatbázisban a képesített vállakozás, hogyan kap megbízást a hűtőkört, vagy berendezést üzemeltető vállalkozástól?", "correct_answer": "A berendezést a tulajdonos/üzemeltető rögzíti a Berendezések\"/\"Saját berendezések\" menüpontban, majd a \"További adatok\" fülön kiadja a tulajdonos cég a megbízást a képesített vállalkozásnak, majd azt követően a képesített vállalkozás azt elfogadja.", "topic": ""}
+{"question": "A Klímagáz adatbázisban hol/hogyan lehet (szivárgásvizsgálatra kötelezett) hűtőkört rögzíteni tulajdonosként/ingatlan üzemeltetőként?", "correct_answer": "A regisztrációt követően, a \"Berendezések\"/\"Saját berendezések\" menüpontban szükséges a hűtőkör alapadatait megadni (pl.: megnevezése, telephelye, tényleges tulajdonos).", "topic": ""}
+{"question": "A kockázatelemzés alkalmával milyen tényezőkre kell figyelemmel lenni?", "correct_answer": "Szilárd és gáz állapotú bomlástermékek jelenléte.", "topic": ""}
+{"question": "Adott k értékű és falvastagságú hőszigetelésnek milyen további hőtechnikai követelménynek kell megfelelnie?", "correct_answer": "A „k” hőátviteli számnak olyan értékűnek kell lenni, hogy a szigetelés meleg oldali felületének hőmérséklete legalább 4-5°C-al magasabb legyen, mint a környezeti levegő méretezési hőmérsékletének megfelelő harmatponti hőmérséklet.", "topic": ""}
+{"question": "Álló, vagy fekvő folyadékgyűjtőt választ?", "correct_answer": "Az álló célszerűbb a kisebb a (túlhűtött) folyadék felület miatt, amit a telített gáz kevésbé melegít fel.", "topic": ""}
+{"question": "Az Adatbázisban regisztrált vállalkozás egyúttal rögtön képesített vállalkozásnak is minősül-e?", "correct_answer": "Nem.", "topic": ""}
+{"question": "Az alábbi elektrotechnikai mennyiségeket kapcsolja össze az SI alap mértékegységükkel:", "correct_answer": "Villamos teljesítmény: watt Ellenállás: ohm Feszültség: volt Áramerősség: amper", "topic": ""}
+{"question": "Egy hűtőkompresszor adattábla szerinti névleges áramfelvétele 12 A. Az üzembehelyezésnél mért munkaponti áramfelvétele 10 A. Mekkora értékre állítja be a motorvédő hőkioldót ?", "correct_answer": "A kompresszor névleges áramfelvétel értékére: azaz 12 A-re.", "topic": ""}
+{"question": "Egy motorvédő hőkioldón milyen kezelő- és állítószerveket találhatunk általában?", "correct_answer": "1. A motor névleges áramértékét beállító tárcsa vagy tolóka 2. Működést ellenőrző tesztgomb", "topic": ""}
+{"question": "Hány napon belül kell rögzíteni a Klímagáz adatbázisban a vásárolt, felhasznált, értékesített F-ÜHG-k típusonkénti és fajtánkénti mennyiségéről vezetett nyilvántartás adatait?", "correct_answer": "8 napon belül.", "topic": ""}
+{"question": "Hány részből áll egy szerviz által is használt Lokring csatlakozó?", "correct_answer": "3 (1 összekötőcső és 2 Lokring gyűrű)", "topic": ""}
+{"question": "Háromfázisú aszinkron kompresszor motort tápláló villamos hálózat egyik fázisa kimarad. Mi történik a motorral, ha ebben a pillanatban éppen üzemel ?", "correct_answer": "A motor tovább forog a kétfázisú táplálással is, de teljesítménye és terhelhetősége csökken. Jellemzően rövid üzemidőt visel el ebben az üzemállapotban meghibásodás nélkül.", "topic": ""}
+{"question": "Hogy állítható át HMRK-L rányomó fogó nagyobb átmérőjű Lokring csatlakozók szerelésére? (16 mm-ig)", "correct_answer": "Szerelőpofák kicserélésével.", "topic": ""}
+{"question": "Hogyan alakul ki az üvegházhatás?", "correct_answer": "Az üvegházhatás a légkör alsó rétegének felmelegedése annak következtében, hogy a napsugárzás relatíve rövid hullámhosszú része jelentősebb elnyelődés nélkül hatol át a légkörön és csak a Föld felszínén nyelődik el. Ugyanakkor a hosszúhullámú kisugárzást lényegesen nagyobb mértékben nyeli el a légkör.", "topic": ""}
+{"question": "Hogyan biztosítható a Lokprep egyenletes elterülése a kötésen belül?", "correct_answer": "A Lokring csatlakozó körbeforgatásával.", "topic": ""}
+{"question": "Hogyan kapcsoljuk be az áramkörbe a feszültség-, és az árammérő műszert?", "correct_answer": "Párhuzamosan kapcsoljuk a feszültségmérőt azzal az áramköri elemmel, amelyen a fellépő feszültségesést mérni kívánjuk. Sorba kapcsoljuk az árammérőt azzal az áramköri elemmel, amelyen a rajta átfolyó áramot mérni kívánjuk.", "topic": ""}
+{"question": "Hogyan keletkezik az ózon?", "correct_answer": "A légkör magasabb rétegeiben lévő oxigénből a legrövidebb hullámhosszú ibolyán túli sugarak hatására.", "topic": ""}
+{"question": "Hogyan kell az összekötendő csöveket előkészíteni Lokring csőkötésekhez?", "correct_answer": "Csővágóval elvágni, sorját, festéket, zsírt olajat eltávolítani.", "topic": ""}
+{"question": "Hogyan működik az alternáló mozgást végző fix löketű kompresszor?", "correct_answer": "A főtengely elmozdul, a tárcsa szöge változik, ami a dugattyú váltakozó mozgását okozza.", "topic": ""}
+{"question": "Hogyan terjed a hő?", "correct_answer": "A hőenergia az egyik testről a másikra vezetéssel, áramlással vagy sugárzással terjedhet.", "topic": ""}
+{"question": "Hogyan változik a szén-dioxid koncentrációja napjainkban, és ez mit okoz?", "correct_answer": "A mérések egyértelműen mutatják, hogy a légköri CO2-koncentráció minden évben új rekordot dönt. Az ipari forradalom előtt ez az érték stabilan 280 ppm körül mozgott, napjainkban viszont már meghaladja a 420 ppm-et.", "topic": ""}
+{"question": "Hogyan változik a vezeték terhelhetősége ha a környezeti hőmérséklet nő ?", "correct_answer": "A környezeti hőmérséklet növekedésével a vezeték terhelhetősége csökken.", "topic": ""}
+{"question": "Hogyan, milyen eszközökkel keressük meg a szivárgási helyet?", "correct_answer": "Szappanos víz, szivárgás kereső hab, gázszivárgás érzékelő műszer, infravörös kamera.", "topic": ""}
+{"question": "Hol alkalmazzák a villamos áram hőhatását?", "correct_answer": "A villamos áram hőhatását fűtésre és anyagok melegítésére használják.", "topic": ""}
+{"question": "Hová építi be egy félhermetikus kompresszorhoz a hangtompítót?", "correct_answer": "A kompresszor tengellyel párhuzamos rezgéscsillapító után. Mindkét oldalán bilinccsel rögzítendő.", "topic": ""}
+{"question": "Kell-e a Klímagáz adatbázisban regisztrált képesített személynek regisztrációs vagy éves klímavédelmi felügyeleti díjat fizetnie?", "correct_answer": "Amennyiben képesített személyként regisztrál a Klímagáz adatbázisba, sem regisztrációs díjat, sem éves klímavédelmi felügyeleti díjat nem kell fizetnie.", "topic": ""}
+{"question": "Kell-e képesített vállakozásnak regisztrációs vagy éves klímavédelmi felügyeleti díjat fizetnie?", "correct_answer": "Amennyiben képesített vállalkozás regisztrál a Klímagáz adatbázisban, regisztrációs díjat nem, viszont éves klímavédelmi felügyeleti díjat kell fizetnie.", "topic": ""}
+{"question": "Kétüléses sarokszelep funkciói:", "correct_answer": "Nyomásellenőrzés Vákuumozás, hűtőközegfeltöltés, lefejtés.", "topic": ""}
+{"question": "Kinek kell regisztrálnia a Klímagáz adatbázisba?", "correct_answer": "Minden vállalkozásnak és természetes személynek, akik klímagázokkal kapcsolatos tevékenységeket végeznek (pl. vásárlás, értékesítés, szivárgásvizsgálat végzése), és/vagy berendezés-tulajdonosoként olyan berendezéssel rendelkezik, amely szivárgásvizsgálatra kötelezett.", "topic": ""}
+{"question": "Lehet-e a Lokring technológiával különböző anyagú és átmérőjű csöveket egyszerűen és gyorsan, egy lépésben, hőközlés nélkül összekötni?", "correct_answer": "Igen.", "topic": ""}
+{"question": "Mekkora (nagyságrendileg) az éves klímavédelmi felügyeleti díj mértéke képesített vállalkozás és hűtőkör esetén?", "correct_answer": "Képesített vállalkozások esetén 40.000 forint/év, hűtőkör tulajdonosok esetében gáztípustól függ, de minimum évente 2000 vagy 4000 forint, maximum értéke 2 000 000 forint.", "topic": ""}
+{"question": "Melyek a közvetett érintés elleni érintésvédelmi módszerek?", "correct_answer": "A felsoroltak közül egy vagy több kombinációja: 1. Gyors automatikus lekapcsolás 2. Kettős szigetelés 3. Védőelválasztás 4. Törpefeszültség 5. A kisülési energia korlátozása.", "topic": ""}
+{"question": "Melyek a legfontosabb figyelembe veendő szempontok a RAC (Refrigeration and Air Conditioning) telepítésénél?", "correct_answer": "Az élet- vagyon- és környezetvédelem.", "topic": ""}
+{"question": "Melyik a legismertebb nyomástartály a primer hűtőrendszerben?", "correct_answer": "A nagynyomású folyadéktartály, amely általában a kondenzátor után a folyadékvezetékbe van beépítve.", "topic": ""}
+{"question": "Melyik az igaz állítás a scroll kompresszorra az alábbiak közül?", "correct_answer": "Orbitális mozgást végez.", "topic": ""}
+{"question": "Mi a feladatuk a kézikapcsolóknak?", "correct_answer": "Váltakozó és egyenfeszültségű hálózatokon különböző berendezések, vezérlések működtetése, emberi beavatkozással történő be- és kikapcsolása.", "topic": ""}
+{"question": "Mi a funkciója az elpárologtató előtt beépített folyadékleválasztónak?", "correct_answer": "Az, hogy az adagoló szervhez tisztán folyadék halmazállapotú hűtőközeg kerüljön.", "topic": ""}
+{"question": "Mi a globális felmelegedés folyamata?", "correct_answer": "A napsugárzás rövidhullámú sugárzásként áthalad a légkörön, azonban a talajt érve átalakul hosszúhullámú sugárzássá, ami már visszafelé nem halad át gyorsan, így felmelegedést okoz.", "topic": ""}
+{"question": "Mi a szívógyűjtő tartály feladata?", "correct_answer": "Ideiglenes tárolóként szolgál a folyékony hűtőközeg számára, megakadályozva, hogy az folyékony halmazállapotban jusson a kompresszorba.", "topic": ""}
+{"question": "Mi a kondenzátor feladata a hűtőkörfolyamatban?", "correct_answer": "A kondenzátorba belépő hűtőközeg magas nyomású és hőmérsékletű gőz a csöveken áthaladva a hűvösebb környezeti hő hatására kondenzálódik és folyadék halmazállapotba vált át.", "topic": ""}
+{"question": "Mi a kondenzátor feladata?", "correct_answer": "A forró hűtőközeg gőz hőtartalmát átadja a levegőnek, így folyadékká alakítja a hűtőközeget.", "topic": ""}
+{"question": "Mi a teendő a visszanyert gázokkal?", "correct_answer": "Amennyiben a visszanyert anyag hulladéknak minősül, úgy a veszélyes hulladékok kezeléséről szóló rendeletben meghatározottak szerint kell eljárni.", "topic": ""}
+{"question": "Mi a villamos munka és hogyan számítjuk ki?", "correct_answer": "Az áramló villamos töltések energiája a fogyasztóban a felhasználási célnak megfelelő munkává alakul. W=U*I*t (V*A*s = Ws) nagyobb egység pld. a kWó", "topic": ""}
+{"question": "Mi a villamos teljesítmény és hogyan számítjuk ki?", "correct_answer": "Egységnyi idő alatt végzett villamos munka a teljesítmény. P= U* I (W).", "topic": ""}
+{"question": "Mi az a GWP?", "correct_answer": "A globális felmelegedési potenciál az üvegházhatású gázok éghajlat melegedést okozó, szén-dioxidhoz viszonyított potenciálja.", "topic": ""}
+{"question": "Mi az anyagmennyiség alapegysége az SI szerint?", "correct_answer": "mol", "topic": ""}
+{"question": "Mi biztosítja a megfelelő tömörzárást egy Lokring csatlakozás esetében?", "correct_answer": "Az összekötendő csövek és a Lokring elemek rugalmas és tartós egymásnak feszülése.", "topic": ""}
+{"question": "Mi különbözteti meg a nyomástartályt a hűtőberendezés többi szerkezeti elemétől?", "correct_answer": "A nyomástartály külön gyártási engedélyezésre kötelezett szerkezeti egység.", "topic": ""}
+{"question": "Mi szükséges a cégképesítés megszerzéséhez?", "correct_answer": "A cégképesítés megszerzéséhez (Megfelelési nyilatkozat elfogadásához) szükséges, hogy a cégnek legyen a vonatkozó jogszabályoknak megfelelő képesítéssel rendelkező alkalmazottja, illetve technikai felszereltsége.", "topic": ""}
+{"question": "Miért építenek a kompresszor motor tekercsébe \"klixont\" vagy termisztort?", "correct_answer": "A kompresszor motort túlmelegedés ellen védeni kell, mert a túlterhelés a tekercs leégését okozhatja.", "topic": ""}
+{"question": "Miért fontos a klímagázok légkörbe kerülésének megakadályozása?", "correct_answer": "A klímagázok olyan tulajdonságokkal rendelkeznek, melyek a globális felmelegedést (üvegházhatást) idéznek elő, mivel megakadályozzák a hő gyors kiáramlását a világűrbe, így felborítva a Föld hőháztartását.", "topic": ""}
+{"question": "Miért használják az előszerelő toldatokat a Lokring csatlakozások készítésénél?", "correct_answer": "Szűk helyen szerelve nem kell annyira kinyitni a rányomó fogó karját.", "topic": ""}
+{"question": "Miért kell az érintésvédelmi védővezető folytonosságát ellenőrizni?", "correct_answer": "Mert ha a védővezető folytonosságának hiánya (szakadása) esetén testzárlat lép fel, úgy a berendezést megérintő személyen keresztül záródik a hibaáram.", "topic": ""}
+{"question": "Mik az 2024/573 EU Rendelet főbb célkitűzései, előírásai?", "correct_answer": "Megfelelő tárolási és megelőzési intézkedésekkel ösztönzi a fluortartalmú üvegházhatású gázok kibocsátásának csökkenését. Főbb elemei: - gázok tárolása, szállítása, visszanyerése, megsemmisítésére és mindezek nyilvántartására, nyomon követhetőségére, berendezések szivárgásvizsgálatára vonatkozó követelmények meghatározása", "topic": ""}
+{"question": "Mikor kell alkalmazni a vásárlási nyilatkozatot?", "correct_answer": "Minden értékesítésre jogosult vállalkozás kizárólag akkor értékesíthet telepítési tanúsítványra köteles berendezést (pl.: split klímát), ha a telepíttető (vásárló) írásban nyilatkozik arról, hogy a berendezés telepítését és beüzemelését képesített személlyel fogja elvégeztetni.", "topic": ""}
+{"question": "Milyen elektrotechnikai mennyiségek közötti összefüggést ír le az Ohm törvény?", "correct_answer": "Ellenállás (R), feszültség (U), áramerősség (I).", "topic": ""}
+{"question": "Milyen előírások érvényesek a gázpalackok szállítására?", "correct_answer": "A palackok legyenek szivárgásmentesek, mechanikailag épek, legyen jó állapotban felszerelt szelepvédő. A palackon legyen szabványos jelölés. A szállítmányozást a veszélyes anyagokra vonatkozó előírásoknak megfelelően kell végrehajtani (kísérő dokumentumok, a járművezető tudja, hogy mit szállít és mi a teendő baleset esetén).", "topic": ""}
+{"question": "Milyen elven működik a forgólapátos kompresszor?", "correct_answer": "A forgólapátok neki feszülnek a hengerfalnak, úgy történik a hűtőközeg szállítás.", "topic": ""}
+{"question": "Milyen értékre kell állítani a kétállású termosztátot?", "correct_answer": "A nagyobb hőmérsékletre, ahol pl. a kompresszort indítani akarom. A kikapcsolás a beállítandó differenciával kisebb hőmérsékleten fog történni.", "topic": ""}
+{"question": "Milyen fajtájú 3 fázisú aszinkron motorokat ismerünk?", "correct_answer": "Az aszinkron motor lehet kalickás forgórészű aszinkron motor (Squirrel Cage Induction Motor - SCIM) vagy csúszógyűrűs forgórészű aszinkron motor (Wound Rotor Induction Motor - WRIM / Slip Ring Motor)", "topic": ""}
+{"question": "Milyen falvastagságú és átmérőjű csövekhez alkalmazható a Lokring technológia?", "correct_answer": "1,5 mm falvastagságig és 22 mm átmérőig", "topic": ""}
+{"question": "Milyen gyakorisággal kell az éves klímavédelmi felügyeleti díjat megfizetni?", "correct_answer": "Kétszer egy évben, márciusban és szeptemberben.", "topic": ""}
+{"question": "Hűtős szervizvállakozások milyen vállalkozás képesítési kategóriák közül választhatnak?", "correct_answer": "HR és MR.", "topic": ""}
+{"question": "Milyen műszeres villamos méréseket és beállításokat kell az első bekapcsolást megelőzően és az üzempróba alatt végezni?", "correct_answer": "1. Hálózati feszültség mérése 2. Áramfelvételek mérése a fogyasztókon 3. Mért mennyiségek kiértékelése 4. Villamos védelmek beállítása 5. Előzőek dokumentálása", "topic": ""}
+{"question": "Milyen nemzetközi egyezmények hivatottak csökkenteni a globális felmelegedést?", "correct_answer": "Kiotói Jegyzőkönyv, Montreali Jegyzőkönyv, Párizsi Megállapodás.", "topic": ""}
+{"question": "Milyen nyomás és hőmérséklettartományon belül használhatók a LOKRING csatlakozások?", "correct_answer": "50 bar, -50…+150 fok celsius", "topic": ""}
+{"question": "Milyen személyi képesítési kategóriák vannak?", "correct_answer": "A helyhez kötött szektor H jelű és H-I, H-II, H-III, H-IV kategóriákat tartalmaz, a mobil szektor pedig M jelű, és M-I, M-II, M-III kategóriákat tartalmaz. Ezen felül E és T jelű képesítéssel is lehet rendelkezni.", "topic": ""}
+{"question": "Milyen szerszámokkal lehet jó villamos kötést kialakítani?", "correct_answer": "A kötőelem gyártója által elfogadott sajtolószerszámokkal: érvéghüvely, saru prések a vezeték fajtája, vastagsága szerint.", "topic": ""}
+{"question": "Milyen villamos mennyiségek közötti összefüggést határoz meg Ohm törvénye?", "correct_answer": "Áram / I /, feszültség / U / és ellenállás / R /", "topic": ""}
+{"question": "Minek a megjelölése a HR és MR a tevékenységi kategóriák megnevezésében?", "correct_answer": "A mobil és a helyhez kötött szektoroké.", "topic": ""}
+{"question": "Mire jogosít a H-I. kategória?", "correct_answer": "Klímagázokat tartalmazó helyhez kötött hűtő-, légkondicionáló és hőszivattyú-berendezések hűtőegységei, valamint szerves Rankine-ciklusok vonatkozásában szivárgásvizsgálat, visszanyerés, telepítés, javítás, karbantartás vagy szervizelés, használaton kívül helyezés, klímagáz kezelése, klímagáz tartályok, alkalmazások közötti átfejtése.", "topic": ""}
+{"question": "Mire jogosít a H-II. kategória?", "correct_answer": "Legfeljebb 12 kW névleges teljesítményű, fluortartalmú üvegházhatású gázokat és szénhidrogéneket tartalmazó helyhez kötött hűtő-, légkondicionáló és hőszivattyú-berendezések hűtőegységei, valamint szerves Rankine-ciklusok vonatkozásában szivárgásvizsgálat, és a 3 kg-nál kevesebb klímagázt tartalmazó rendszerek esetén: visszanyerés, telepítés, javítás, karbantartás vagy szervizelés, használaton kívül helyezés, klímagáz kezelése, klímagáz tartályok, alkalmazások közötti átfejtése.", "topic": ""}
+{"question": "Mire jogosít a H-III. kategória?", "correct_answer": "Klímagázokat tartalmazó helyhez kötött hűtő-, légkondicionáló és hőszivattyú-berendezések hűtőegységei, valamint szerves Rankine-ciklusok vonatkozásában: visszanyerés azon alkalmazások vonatkozásában, amelyek 3 kg-nál – hermetikusan zárt alkalmazások esetén, 6 kg-nál – kevesebb klímagázt tartalmaznak, klímagáz kezelése, klímagáz tartályok, alkalmazások közötti átfejtése.", "topic": ""}
+{"question": "Mire jogosít a H-IV. kategória?", "correct_answer": "Szivárgásvizsgálat, feltéve, hogy a tevékenység nem jár hűtőkörbe történő beavatkozással.", "topic": ""}
+{"question": "Mire jogosít a T-I. kategória?", "correct_answer": "Tűzvédelmi készülékekben és berendezésekben alkalmazott klímagáz szivárgásvizsgálatára, használatára és kezelésére jogosít.", "topic": ""}
+{"question": "Mire jogosít az E-I. kategória?", "correct_answer": "Villamos berendezésekben alkalmazott SF6 gáz szivárgásvizsgálatára, használatára és kezelésére jogosít.", "topic": ""}
+{"question": "Mire jogosít az M-I. kategória?", "correct_answer": "Klímagázokat tartalmazó, MR szektorba tartozó alkalmazások hűtőegységei vonatkozásában szivárgásvizsgálatra, visszanyerésre, telepítésre, javításra, karbantartásra vagy szervizelésre, használaton kívül helyezésre, klímagáz kezelésre, klímagáz tartályok, alkalmazások közötti átfejtésére.", "topic": ""}
+{"question": "Mire jogosít az M-II. kategória?", "correct_answer": "A 2006/40/EK irányelv hatálya alá tartozó járművek hűtőegységei vonatkozásában szivárgásvizsgálatra, visszanyerésre, telepítésre, javításra, karbantartásra vagy szervizelésre, használaton kívül helyezésre, klímagáz kezelésre, klímagáz tartályok, alkalmazások közötti átfejtésére.", "topic": ""}
+{"question": "Mire jogosít az M-III. kategória?", "correct_answer": "Klímagázokat tartalmazó, MR szektorba tartozó alkalmazások hűtőegységei vonatkozásában visszanyerésre, klímagáz kezelésre, klímagáz tartályok, alkalmazások közötti átfejtésére.", "topic": ""}
+{"question": "Mit kell tennem, ha meg szeretném változtatni a bejelentkezési e-mail címem, cégnevem, adószámom, a kapcsolattartót illetve annak adatait?", "correct_answer": "Az adatmódosítást kizárólag elektronikusan, a SZÜF-ön keresztül kezdeményezhetem a Nemzeti Klímavédelmi Hatóság felé.", "topic": ""}
+{"question": "Mit kell tenni a keletkezett veszélyes hulladékokkal?", "correct_answer": "A veszélyes hulladékokat fajtánként elkülönítve tárolóedénybe kell helyezni, megfelelő módon fel kell címkézni és a telephelyen elkülönített veszélyes hulladék tárolóban kell elhelyezni, további elhelyezés, ártalmatlanítás, megsemmisítés céljából.", "topic": ""}
+{"question": "Mit kell tenni szivárgás észlelése esetén, és hogyan történik ennek dokumentálása?", "correct_answer": "A szivárgásészlelés esetén a lehető legrövidebb időn belül ki kell javítani, és a javítást követő egy hónapon belül meg kell győződni a javítás sikerességéről. Minden olyan intézkedést meg kell tenni, ami megakadályozza, hogy a szivárgás továbbra is fennálljon. Dokumentálni elektronikus jegyzőkönyv formájában a Klímagáz adatbázisban szükséges.", "topic": ""}
+{"question": "Mit kell tudni a kondenzátorról?", "correct_answer": "A szinuszosan váltakozó jelű áramkörben a kondenzátoron mérhető feszültség 90 fokkal késik a rajta folyó áramhoz képest.", "topic": ""}
+{"question": "Mitől függ a villamos vezetékek terhelhetősége?", "correct_answer": "1. A vezeték keresztmetszetétől 2. A szigetelés anyagától 3. Az elhelyezés módjától 4. A környezeti hőmérséklettől 5. Együtt futó terhelt vezeték erek számától.", "topic": ""}
+{"question": "Regisztrálnia kell-e az adatbázisba berendezés tulajdonosként természetes személynek?", "correct_answer": "Igen, amennyiben a természetes személy szivárgásvizsgálatra kötelezett berendezés tulajdonosa.", "topic": ""}
+{"question": "Szükséges - e berendezés tulajdonosok regisztrációja során megfelelési nyilatkozat feltöltése a Klímagáz adatbázisban?", "correct_answer": "Nem. Alternatív válasz: 1", "topic": ""}
+{"question": "Szükséges-e Megfelelési nyilatkozat feltöltése újonnan, HR. kategóriában regisztráló vállalkozás számára?", "correct_answer": "Igen.", "topic": ""}
+{"question": "Szükséges-e Megfelelési nyilatkozatot megküldeni a Hatóságnak postai úton is?", "correct_answer": "Nem.", "topic": ""}
+{"question": "Mikor tekinthető elvégzettnek a szivárgásvizsgálat?", "correct_answer": "Amikor a képesített vállalkozás képesített alkalmazottja feltölti a szivárgásvizsgálati jegyzőkönyvet.", "topic": ""}
+{"question": "A berendezés-tulajdonos vállakozás a berendezés eladásakor fel tudja tölteni az eladási dokumentumokat?", "correct_answer": "Igen, amennyiben a vásárló nem veszi át a berendezést, az Adatbázisban 8 nap után megjelenik a dokumentum feltöltésének lehetősége.", "topic": ""}
+{"question": "Természetes személyként regisztráltam, H-I-es személyképesítésem van, most vállalkozást indítok. Van-e valamilyen tennivalóm?", "correct_answer": "A vállalkozást külön szükséges regisztrálni a Klímagáz adatbázisban, majd a foglalkoztatott vállalkozáshoz hozzárendelése után a megfelelő cégképesítésre kell jelentkezni.", "topic": ""}
+{"question": "A Telepítési tanúsítványt ki generálja a Klímagáz adatbázisból?", "correct_answer": "A telepítésre jogosult vállalkozás képesített alkalmazottja.", "topic": ""}
+{"question": "Az alkalmazás tulajdonosa vagy üzemeltetője jegyzőkönyvezési megbízást adhat egyetlen jegyzőkönyv típusra is a képesített vállalkozásnak?", "correct_answer": "Igen, jegyzőkönyv típusonként adható megbízás a képesített vállakozásnak.", "topic": ""}
+{"question": "Az alkalmazáson elvégzett karbantartási tevékenységet mikor kell elvégzettnek tekinteni?", "correct_answer": "Az alkalmazáson végzett, vagy azt érintő, képesítést igénylő tevékenységek akkor minősülnek elvégzettnek, amikor az elektronikus jegyzőkönyvet rögzítik a Klímagáz adatbázisban.", "topic": ""}
+{"question": "Az alábbi állításra melyik válasz a helyes? Vállalkozások kérelmet, dokumentumokat email útján is küldhetnek a Hatóság számára.", "correct_answer": "Nem, mert a vállalkozások kérelmet a személyre szabott ügyintézési felületen (SZÜF) keresztül terjeszthetnek elő, melynek elérhetősége: https://szuf.magyarorszag.hu/.", "topic": ""}
+{"question": "Melyik hatályos Európai Úniós jogszabály vonatkozik a fluortartalmú üvegházhatású gázok felhasználásának szabályaira?", "correct_answer": "Az Európai Parlament és Tanács 573/2024/EU Rendelet.", "topic": ""}
+{"question": "Mik a fluorozott szénhidrogének vagy HFC-k?", "correct_answer": "Az 573/2024 EU Rendelet I. melléklet 1. szakaszában felsorolt anyagok, vagy az említett anyagok bármelyikét tartalmazó keverékek. Pl: R-134a", "topic": ""}
+{"question": "Lehet-e üzemeltető természetes személy?", "correct_answer": "Igen.", "topic": ""}
+{"question": "Mi az F-ÜHG-k újrahasznosítása?", "correct_answer": "Visszanyert fluortartalmú üvegházhatású gázoknak az alapvető tisztítást követő újrafelhasználása.", "topic": ""}
+{"question": "Mi a regenerálás?", "correct_answer": "Visszanyert, fluortartalmú üvegházhatású gáz oly módon való újrafeldolgozása, hogy a tervezett felhasználásra tekintettel a gáz ugyanolyan tulajdonságokkal rendelkezzen a teljesítményszintet illetően, mint egy gyári új anyag.", "topic": ""}
+{"question": "Mi az ártalmatlanítás?", "correct_answer": "Az a folyamat, amelynek során az összes fluortartalmú üvegházhatású gázt vagy annak túlnyomó részét átalakítják vagy lebontják egy vagy több olyan stabil anyaggá, amely nem fluortartalmú üvegházhatású gáz.", "topic": ""}
+{"question": "Mit jelent, hogy egy berendezés ,,helyhez kötött,,?", "correct_answer": "Működés közben szokásos körülmények között nincs mozgásban, ideértve a hordozható beltéri légkondicionáló berendezéseket is.", "topic": ""}
+{"question": "Milyen lehet a szivárgásészlelő rendszer?", "correct_answer": "Fluortartalmú üvegházhatású gázok szivárgását jelző mechanikus, elektromos vagy elektronikusan kalibrált készülék, amely szivárgás észlelésekor riasztja az üzemeltetőt.", "topic": ""}
+{"question": "Igaz-e az alábbi kijelentés: Tilos fluortartalmú üvegházhatású gázokat szándékosan a légkörbe kibocsátani, amennyiben a kibocsátás a rendeltetésszerű használa szempontjából műszakilag nem indokolt.", "correct_answer": "Igen.", "topic": ""}
+{"question": "Berendezés szivárgása esetén kinek kell gondoskodnia annak javításáról?", "correct_answer": "Az üzemeltetőnek.", "topic": ""}
+{"question": "Igaz-e az alábbi állítás: A legalább 5 tonna CO2-egyenértéknek megfelelő mennyiségű, nem hab formájában tárolt fluortartalmú üvegházhatású gázokat tartalmazó berendezések üzemeltetőinek gondoskodniuk kell a berendezések szivárgásvizsgálatáról.", "correct_answer": "Igen.", "topic": ""}
+{"question": "Minimum mekkora CO2-egyenértéknek megfelelő mennyiségű, nem hab formájában tárolt fluortartalmú üvegházhatású gázokat tartalmazó berendezések üzemeltetőinek kell gondoskodniuk a berendezés szivárgásvizsgálatáról.", "correct_answer": "5 tonna CO2", "topic": ""}
+{"question": "Vonatkozik-e a szivárgásvizsgálati kötelezettség a helyhez kötött hűtőberendezésekre?", "correct_answer": "Igen.", "topic": ""}
+{"question": "Vonatkozik-e a szivárgásvizsgálati kötelezettség a helyhez kötött légkondicionáló berendezésekre?", "correct_answer": "Igen.", "topic": ""}
+{"question": "Vonatkozik-e a szivárgásvizsgálati kötelezettség a helyhez kötött hőszivattyúkra?", "correct_answer": "Igen.", "topic": ""}
+{"question": "Vonatkozik-e a szivárgásvizsgálati kötelezettség a helyhez kötött tűzvédelmi berendezéskre?", "correct_answer": "Igen.", "topic": ""}
+{"question": "Milyen gyakorisággal kell elvégezni a szivárgásvizsgálatot a legalább 5 tonna, de kevesebb mint 50 tonna CO2-egyenértéknek megfelelő mennyiségű fluortartalmú üvegházhatású gázt tartalmazó berendezéseken?", "correct_answer": "Legalább 12 havonta.", "topic": ""}
+{"question": "Milyen gyakorisággal kell elvégezni a szivárgásvizsgálatot a legalább 50 tonna, de kevesebb mint 500 tonna CO2-egyenértéknek megfelelő mennyiségű fluortartalmú üvegházhatású gázt tartalmazó berendezéseken?", "correct_answer": "Legalább 6 havonta.", "topic": ""}
+{"question": "Milyen gyakorisággal kell elvégezni a szivárgásvizsgálatot a legalább 500 tonna CO2-egyenértéknek megfelelő mennyiségű fluortartalmú üvegházhatású gázt tartalmazó berendezéseken?", "correct_answer": "Legalább 3 havonta.", "topic": ""}
+{"question": "Milyen gyakran kell ellenőriztetni a felszerelt szivárgásészlelő rendszert?", "correct_answer": "Legalább 12 havonta.", "topic": ""}
+{"question": "Helyhez kötött hűtő-, helyhez kötött légkondicionáló és helyhez kötött hőszivattyú-berendezések esetén ki végezheti el a gázok visszanyerését?", "correct_answer": "Megfelelő képesítéssel rendelkező természetes személy.", "topic": ""}
+{"question": "Elismeri-e a Nemzeti Klímavédelmi Hatóság a más tagállamban kibocsátott képesített igazolásokat és képzési igazolásokat?", "correct_answer": "Igen, el kell ismernie.", "topic": ""}
+{"question": "Mikor értékesíthető kalorikus helyszíni szerelést igénylő fluortartalmú üvegházhatású gázokkal töltött, nem hermetikusan zárt berendezés végfelhasználó számára?", "correct_answer": "Csak abban az esetben értékesíthetők a végfelhasználó számára, ha az igazolja a vásárlói nyilatkozatban, hogy azok telepítését megfelelően képesített vállalkozás fogja elvégezni.", "topic": ""}
+{"question": "2020. január 1-jétől mekkora globális felmelegedési potenciállal rendelkező gyári új fluortartalmú üvegházhatású gázokat tilos a legalább 40 tonna CO2-egyenértéknek megfelelő hűtőközeget tartalmazó hűtőberendezések szervizeléséhez vagy karbantartásához használni.", "correct_answer": "A 2 500-as vagy annál nagyobb globális felmelegedési potenciállal rendelkező fluortartalmú üvegházhatású gázokat.", "topic": ""}
+{"question": "Van-e a keverékeknek GWP-je?", "correct_answer": "Igen, melyet az egyes anyagok – ideértve a fluortartalmú üvegházhatású gázoktól eltérő anyagokat is – GWP-jükkel szorzott tömegarányai összegének súlyozott átlagaként kell kiszámítani.", "topic": ""}
+{"question": "Ki üzemelteti a Klímagáz adatbázist?", "correct_answer": "A Nemzeti Klímavédelmi Hatóság", "topic": ""}
+{"question": "Melyik az az azonosító, amelyen a Klímagáz adatbázisban tárolt adatokat nyílvántarja a Nemzeti Klímavédelmi Hatóság?", "correct_answer": "Az F-Gáz ügyfélazonosító.", "topic": ""}
+{"question": "Mire kötelezi a Nemzeti Klímavédelmi Hatóság azt, aki aki tevékenységével vagy mulasztásával a fluortartalmú üvegházhatású gázokkal kapcsolatos jogszabály, az Európai Unió általános hatályú, közvetlenül alkalmazandó jogi aktusa vagy a klímavédelemért felelős hatóság határozatában foglalt előírásait megsérti, az azokban foglalt kötelezettségeit nem vagy nem megfelelően teljesíti, vagy a tevékenységet nyilvántartásba vétel nélkül vagy attól eltérően végzi?", "correct_answer": "Aki tevékenységével vagy mulasztásával a fluortartalmú üvegházhatású gázokkal kapcsolatos jogszabály, az Európai Unió általános hatályú, közvetlenül alkalmazandó jogi aktusa vagy a klímavédelemért felelős hatóság határozatában foglalt előírásait megsérti, az azokban foglalt kötelezettségeit nem vagy nem megfelelően teljesíti, vagy a tevékenységet nyilvántartásba vétel nélkül vagy attól eltérően végzi, azt a klímavédelemért felelős hatóság klímavédelmi bírság megfizetésére kötelezi.", "topic": ""}
+{"question": "Mentesít-e a klímavédelmi bírság kiszabása a büntetőjogi, polgári jogi és közigazgatási jogi felelősség alól?", "correct_answer": "Nem mentesít.", "topic": ""}
+{"question": "Mik az üvegházhatású gázok?", "correct_answer": "A szén-dioxid (CO2), a metán (CH4), a dinitrogén-oxid (N2O), a fluortartalmú üvegházhatású gázok, a perfluorkarbonok (PFC-k), a kén-hexafluorid (SF6) és a nitrogén-trifluorid (NF3).", "topic": ""}
+{"question": "Mi a szén-dioxid egyenérték?", "correct_answer": "Egy tonna szén-dioxid vagy azzal megegyező globális éghajlat-módosító potenciálnak (GWP) megfelelő mennyiségű üvegházhatású gáz.", "topic": ""}
+{"question": "Hány napon belül kötelesek a Klímagáz adatbázisban szereplők az adataikban bekövetkezett változást bejelenteni a Nemzeti Klímavédelmi Hatóságnak?", "correct_answer": "A változást követő 8 munkanapon belül.", "topic": ""}
+{"question": "Hol találhatók a már tiltott, vagy tiltásra kerülő termékek és berendezések forgalombahozatalának tilalmi listája?", "correct_answer": "Az 573/2024 EU rendelet IV. számú mellékletében.", "topic": ""}
+{"question": "Szabad-e forgalomba hozni 150-nél nagyobb GWP-vel rendelkező HFC-ket tartalmazó háztartási hűtőszekrényeket és fagyasztógépeket?", "correct_answer": "Nem, az 573/2024/EU rendelet alapján már nem szabad forgalomba hozni.", "topic": ""}
+{"question": "Mit jelent az MR szektor?", "correct_answer": "A szállítható vagy helyváltoztatásra képes, szállítás vagy helyváltoztatás közbeni önálló hűtésre alkalmas, klímagázt tartalmazó vagy azzal működtetett mobil rendszerek és alkalmazások.", "topic": ""}
+{"question": "Mely szervek járnak el klímavédelemért felelős hatóságként?", "correct_answer": "A Nemzeti Klímavédelmi Hatóság, illetékes katasztrófavédelmi kirendeltség, Belügyminisztérium Országos Katasztrófavédelmi Főigazgatóság, honvédelemért felelős miniszter, illetékes közlekedési hatóság és a Nemzeti Adó- és Vámhivatal.", "topic": ""}
+{"question": "Igaz-e az alábbi kijelentés: A Nemzeti Klímavédelmi Hatóság klímagázokkal kapcsolatos hatósági jogkörök gyakorlását végzi.", "correct_answer": "Igen.", "topic": ""}
+{"question": "Milyen anyagokat értünk a klímagáz törvény szerinti klímagázok csoportján?", "correct_answer": "F-ÜHG (F-gázok), ORLA anyagok, szén-dioxid, ammónia, szénhidrogének.", "topic": ""}
+{"question": "A Nemzeti Klímavédelmi Hatóságnak van-e jogosultsága helyszíni ellenőrzéseket lefolytatni?", "correct_answer": "Igen.", "topic": ""}
+{"question": "Hány napon belül kell rgisztrálnia az üzemeltetőnek az adatbázis saját üzemeltetésben lévő berendezések nyilvántartására szolgáló felületén a szivárgásvizsgálatra kötelezett klímagázt tartalmazó - honvédségi alkalmazásnak nem minősülő - alkalmazását, valamint üvegházhatású gázokkal töltött elektromos kapcsolóberendezését?", "correct_answer": "Az üzembe helyezést követő 8 napon belül.", "topic": ""}
+{"question": "A 2024/573 Rendelet szerint kinek kell gondoskodni az alkalmazások szivárgásvizsgálatáról?", "correct_answer": "A berendezések üzemeltetőinek és gyártónak kell gondoskodniuk a berendezések szivárgásvizsgálatáról", "topic": ""}
+{"question": "A vonatkozó EU-s rendelet értelmében mely berendezéseket kell szivárgásészlelő rendszerrel ellátni?", "correct_answer": "A legalább 500 tonna CO2-egyenértéknek megfelelő mennyiségű fluortartalmú üvegházhatású gázt tartalmazó helyhez kötött hűtőberendezéseket, légkondicionáló berendezéseket, hőszivattyúkat, tűzvédelmi berendezéseket.", "topic": ""}
+{"question": "Ismételt jogsértés esetén milyen nagyságrendű bírsággal kell számolni a klímagázokkal kapcsolatos tevékenységek végzésének feltételeiről szóló 458/2024. (XII. 30.) Korm. rendelet szerint?", "correct_answer": "Ismételt jogsértés – ugyanazon vagy más jogsértés elkövetése – esetén a bírság mértéke a meghatározott, fix mértékű bírság mértékének 150%-a.", "topic": ""}
+{"question": "A klímagázokkal kapcsolatos tevékenységek végzésének feltételeiről szóló 458/2024. (XII. 30.) Korm. rendelet alapján H-I. személy képesítéssel rendelkező természetes személy az F-ÜHG-t tartalmazó és azzal üzemelő alkalmazások esetében, HR. képesített vállalkozás alkalmazottjaként mely feladatokat végezhet?", "correct_answer": "Alkalmazások telepítése, beüzemelése, szervizelése, karbantartása, javítása vagy használaton kívül helyezése, alkalmazások szivárgásvizsgálata, az F-ÜHG visszanyerése.", "topic": ""}
+{"question": "Kinek kell feltöltenie a szivárgásvizsgálati jegyzőkönyvet?", "correct_answer": "A szivárgásvizsgálatot elvégző képesített személynek.", "topic": ""}
+{"question": "Kinek a felelőssége, hogy a szivárgásvizsgálati jegyzőkönyv a Klímagáz adatbázisban feltöltésre kerüljön?", "correct_answer": "Az alkalmazás üzemeltetőjének a felelőssége.", "topic": ""}
+{"question": "Mit nevezünk hűtőkörnek?", "correct_answer": "Klímagáz közeg töltetet tartalmazó zárt rendszer alkotóelemeinek összességét, amelynek minden részében a klímagáz közeg hőszállítás céljából keringtethető.", "topic": ""}
+{"question": "Mely jogszabály(ok)ban kerül(nek) felsorolásra a klímagázok fajtái, típusai?", "correct_answer": "A klímagáz törvényben.", "topic": ""}
+{"question": "Hogyan nevezzük az országos illetékességel rendelkező klímavédelemért felelős szervet?", "correct_answer": "Nemzeti Klímavédelmi Hatóság", "topic": ""}
+{"question": "Milyen formában kötelesek a vállalkozások kapcsolatot tartani a Nemzeti Klímavédelmi Hatósággal?", "correct_answer": "Elektronikus formában.", "topic": ""}
+{"question": "Regisztrációköteles-e a személygépjárművek klímaberendezése?", "correct_answer": "Nem.", "topic": ""}
+{"question": "Elvégezheti-e klímagázt tartalmazó berendezések telepítését a HR. cégképesítéssel rendelkező vállalkozás, amennyiben érvényes M-II. személyképesítéssel rendelkező alkalmazottat foglalkoztat?", "correct_answer": "Nem.", "topic": ""}
+{"question": "Kell-e jelezni az üzemeltető személyében bekövetkezett változást a Nemzeti Klímavédelmi Hatóság felé?", "correct_answer": "Igen, minden esetben.", "topic": ""}
+{"question": "Szivárgó hűtőkörbe lehet-e pótolni az elszivárgott ózonréteget lebontó anyagot?", "correct_answer": "Nem.", "topic": ""}
+{"question": "Kell-e szivárgásvizsgálatot végezni a 45 tCO2-egyenértékű hűtőközeget tartalmazó alkalmazáson, ha hermetikusan zárt, és szivárgásészlelő rendszerrel lett ellátva?", "correct_answer": "Igen, kétévente.", "topic": ""}
+{"question": "Be kell-e regisztrálni a Klímagáz adatbázisba a 8 tCO2-egyenértékű hűtőközeget tartalmazó, hermetikusan zárt alkalmazást?", "correct_answer": "Nem.", "topic": ""}
+{"question": "Betölthető-e alkalmazásokba az újrahasznosított klímagáz?", "correct_answer": "Igen, de csak abba az alkalmazásba, amelyből visszanyerésre került.", "topic": ""}
+{"question": "Hogyan nevezzük azt a nyilatkozatot, amelyet előtöltött berendezés gyártóinak, importőreinek az Európai Unión belül történő forgalomba hozatala során ki kell állítaniuk?", "correct_answer": "Megfelelőségi nyilatkozat.", "topic": ""}
+{"question": "Milyen engedély szükséges a fluorozott szénhidrogének ömlesztett formában az Európai Unió területére történő importjához?", "correct_answer": "NK Klímagáz kategória felvétele, valamint az Európai Unió Bizottsága által működtetett nyilvántartásban történő regisztráció és az ehhez kapcsolódó kvóta igénylése szükséges.", "topic": ""}
+{"question": "Európai uniós szinten közvetlenül mely szervvel zajlik a fluorozott szénhidrogének forgalomba hozatalához kapcsolódó ügyintézés?", "correct_answer": "Európai Unió Bizottsága.", "topic": ""}
+{"question": "Szivárgásvizsgálat elvégzését követően mikor kell feltölteni a Klímagáz adatbázisba az erről készült elektronikus jegyzőkönyvet?", "correct_answer": "A szivárgásvizsgálat elvégzését követően haladéktalanul, hiszen a tevékenység akkor minősül elvégzettnek, amikor az elektronikus jegyzőkönyvet rögzítik.", "topic": ""}
+{"question": "Elvégezheti-e a személygépjárművek klímaberendezéseinek szervizelését H-I. személyképesítéssel rendelkező képesített személy?", "correct_answer": "Nem.", "topic": ""}
+{"question": "Végezhet-e szivárgásvizsgálatot érvényes képesítéssel nem rendelkező természetes személy?", "correct_answer": "Nem.", "topic": ""}
+{"question": "Szivárgás észlelése esetén milyen időintervallumon belül kell gondoskodni az érintett alkalmazás javításának ellenőrzéséről?", "correct_answer": "1 hónap.", "topic": ""}
+{"question": "Érvényes HR-II. képesítéssel rendelkező vállalkozás jogosult-e ózonréteget lebontó anyag vásárlására, értékesítésére?", "correct_answer": "Nem.", "topic": ""}
+{"question": "A klímagáz készletben bekövetkezett mennyiségi változást kell-e jelezni a Nemzeti Klímavédelmi Hatóság felé?", "correct_answer": "Igen, minden esetben.", "topic": ""}
+{"question": "Szivárgásészlelő rendszer telepítése esetén szükséges-e jegyzőkönyvet feltölteni a Klímagáz adatbázisba?", "correct_answer": "Igen. Alternatív válasz: .", "topic": ""}
+{"question": "Milyen célt szolgál a telepítési tanúsítvány?", "correct_answer": "A telepíttető ezzel a dokumentummal igazolja, hogy a vásárolt alkalmazás telepítését képesített vállalkozás végezte el.", "topic": ""}
+{"question": "Be kell-e regisztrálni a szén-dioxiddal működtetett hűtőberendezést a Klímagáz adatbázisba?", "correct_answer": "Csak abban az esetben, ha 5 kg-nál nagyobb a töltetmennyisége.", "topic": ""}
+{"question": "A klímagázokkal kapcsolatos tevékenységek végzésének feltételeiről szóló 458/2024. (XII. 30.) Korm. rendelet alapján M-I. személy képesítéssel rendelkező természetes személy, MR. képesített vállalkozás alkalmazottjaként milyen típusú berendezések hűtőkörét kezelheti?", "correct_answer": "hűtőkamionok és -pótkocsik hűtőegységei; hűtött könnyűgépjárművek és intermodális konténerek – beleértve a hűtőkonténereket is –, és vasúti kocsik hűtőegységei; nehézgépjárművek, kisteherautók, mezőgazdasági, bányászati és építési műveletekben használt nem közúti mozgó gépek, vonatok, metrók, villamosok és légi járművek légkondicionáló berendezései és hőszivattyúi.", "topic": ""}
+{"question": "Mely jogszabály tartalmazza azokat a kivételeket, melyek esetén ORLA, ORLA-t tartalmazó, valamint ilyen gázokkal működtetett alkalmazások kereskedelmi forgalomba hozhatók?", "correct_answer": "590/2024 EU parlamenti és tanácsi rendelet.", "topic": ""}
+{"question": "Mely F-ÜHG-k esetén köteles nyilvántartást vezetni a képesített és a regisztrált vállalkozás?", "correct_answer": "A vásárolt, felhasznált, értékesített, visszanyert, újrahasznosított, regenerált, ártalmatlanított F-ÜHG-k esetén.", "topic": ""}
+{"question": "Szabhat-e ki bírságot a Nemzeti Klímavédelmi Hatóság?", "correct_answer": "Igen.", "topic": ""}
+{"question": "A regisztrációköteles alkalmazás üzemeltetőjének személyében bekövetkezett változás esetén, amennyiben az új üzemeltető a változást 8 napon belül nem hagyja jóvá, hány nap áll a korábbi üzemeltető rendelkezésére a változást alátámasztó dokumentumok csatolására?", "correct_answer": "A változásnak az új üzemeltető általi jóváhagyására rendelkezésre álló 8 napos határidőt követő 15 nap.", "topic": ""}
+{"question": "Mi a kompresszor feladata a hűtőkörben?", "correct_answer": "A hűtőközeg áramlásának fenntartása a rendszerben, nyomáskülönbség létrehozása a hűtőkörben.", "topic": ""}
+{"question": "Milyen hűtőköközegeket nevezünk biztonsági hűtőközegnek?", "correct_answer": "A nem mérgező és nem gyúlékony hűtőközegeket.", "topic": ""}
+{"question": "Melyek a nem mérgező, de kisfokú gyúlékonyságú hűtőközegek?", "correct_answer": "R-1234yf(ze), R-32.", "topic": ""}
+{"question": "Melyek a természetes hűtőközegek?", "correct_answer": "R-717, R-744.", "topic": ""}
+{"question": "Melyek a HFO csoportba tartozó hűtőközegek?", "correct_answer": "R-1234yf és R-1234ze.", "topic": ""}
+{"question": "Melyek a HC csoportba tartozó hűtőközegek?", "correct_answer": "R-290, R-1270, R-600a.", "topic": ""}
+{"question": "Melyek a HFC csoportba tartozó hűtőközegek?", "correct_answer": "R-134a, R-404A, R-507, R-407C, R-410A, R-32.", "topic": ""}
+{"question": "Melyek az alternatív alacsony GWP-jű hűtőközegek?", "correct_answer": "R-1234yf(ze), R-32, R-290, R-1270, R-600a, R-717, R-744.", "topic": ""}
+{"question": "Melyek az R-404A helyettesítő RETROFIT hűtőközegei?", "correct_answer": "R-407A, R-407F, R-452A, R-448A, R-449A, R-407H.", "topic": ""}
+{"question": "Melyek az R-134a alacsony GWP-jű helyettesítő RETROFIT hűtőközegei (GWP<750)", "correct_answer": "R-450A, R-513A.", "topic": ""}
+{"question": "Melyek az R-404A alacsony GWP-jű helyettesítő RETROFIT hűtőközegei (GWP<2500)?", "correct_answer": "R-407A, R-407F, R-452A.", "topic": ""}
+{"question": "Melyek az R-404A alacsony GWP-jű helyettesítő RETROFIT hűtőközegei (GWP<1500)?", "correct_answer": "R-448A, R-449A, R407H.", "topic": ""}
+{"question": "Melyek az R410A alacsony GWP-jű helyettesítő RETROFIT hűtőközege (GWP<750)?", "correct_answer": "R-466A.", "topic": ""}
+{"question": "Melyek az R134a alacsony GWP-jű ALTERNATÍV hűtőközegei új kereskedelmi hűtőgépekben (GWP<150)?", "correct_answer": "R-1234yf, R-1234ze.", "topic": ""}
+{"question": "Melyek az R134a alacsony GWP-jű ALTERNATÍV új hűtőközegei autóklímákban (GWP<150)?", "correct_answer": "R-1234yf.", "topic": ""}
+{"question": "Melyek az R134a alacsony GWP-jű ALTERNATÍV új hűtőközegei háztartási hűtőszekrényekben (GWP<150)?", "correct_answer": "R-600a.", "topic": ""}
+{"question": "Melyek az R404A alacsony GWP-jű ALTERNATÍV új hűtőközegei kereskedelmi hűtőgépekben (GWP<150)?", "correct_answer": "R-290, R-1270, R-717, R-744.", "topic": ""}
+{"question": "Melyek az R404A alacsony GWP-jű ALTERNATÍV új fluormentes hűtőközegei kereskedelmi hűtőgépekben (GWP<3)?", "correct_answer": "R-290, R-1270, R-717, R-744.", "topic": ""}
+{"question": "Melyek az R410A alacsony GWP-jű ALTERNATÍV új fluormentes hűtőközege klímaberendezésekben (GWP<3)?", "correct_answer": "R-290.", "topic": ""}
+{"question": "Milyen tilalom vonatkozik kereskedelmi hűtőgépek létesítésére 2020 óta?", "correct_answer": "GWP<2500 hűtőközeg alkalmazása megengedett.", "topic": ""}
+{"question": "Milyen tilalom vonatkozik a <12kW alatti split klímaberendezések forgalomahozatalára 2027-től?", "correct_answer": "GWP<150 hűtőközeg alkalmazása megengedett.", "topic": ""}
+{"question": "Milyen tilalom vonatkozik a <12kW alatti split hőszivattyúk forgalomahozatalára 2027-től?", "correct_answer": "GWP<150 hűtőközeg alkalmazása megengedett.", "topic": ""}
+{"question": "Milyen tilalom vonatkozik az összes kereskedelmi hűtőberendezésre 2030-tól?", "correct_answer": "GWP<150 hűtőközeg alkalmazása megengedett.", "topic": ""}
+{"question": "Milyen tilalom vonatkozik a 12 kW feletti klíma- és hőszivattyú berendezésekre 2033-tól (hosszútávon)?", "correct_answer": "GWP<150 hűtőközeg alkalmazása megengedett.", "topic": ""}
+{"question": "Mikortól tilos a <12 kW alatti osztott rendszerek (split klímaberendezések és hőszivattyúk) forgalomba hozatal bármilyen F-gázzal?", "correct_answer": "2035", "topic": ""}
+{"question": "Melyek a fluortartalmú hűtőközegek?", "correct_answer": "CFC, HCFC, HFC, HFO.", "topic": ""}
+{"question": "Melyek a fluormentes hűtőközegek?", "correct_answer": "R-290, R-1270, R-600a, R-717, R-744.", "topic": ""}
+{"question": "Milyen tilalom vonatkozik az \"önálló\" (HFC töltetű) hűtőbútorra 2022-től?", "correct_answer": "GWP<150 hűtőközeg alkalmazása megengedett.", "topic": ""}
+{"question": "Szabad-e a meglévő kereskedelmi hűtőgépbe regenerált R-404A hűtőközeget utántölteni 2025 január 1-je után?", "correct_answer": "Igen.", "topic": ""}
+{"question": "Szabad-e a meglévő kereskedelmi hűtőgépbe gyári, új R-404A hűtőközeget utántölteni 2025 január 1-je után?", "correct_answer": "Nem.", "topic": ""}
+{"question": "Mit nevezünk \"önálló\" hűtőbútornak?", "correct_answer": "Teljes egészében gyárban készült, egy-vagy több részes, nincs helyszínen szerelendő hűtőköri része.", "topic": ""}
+{"question": "Melyik a jelenleg hatályos \"F-gáz\" rendelet?", "correct_answer": "2024/573/EU \"F-gáz rendelet\".", "topic": ""}
+{"question": "Milyen tevékenység végezhető az új H-I kategória (458/2024. Korm. rendelet) szerinti képesítéssel?", "correct_answer": "Az összes szerviztevékenységre jogosít HR kategóriában.", "topic": ""}
+{"question": "Milyen tevékenység végezhető az új H-II kategória (458/2024. Korm. rendelet) szerinti képesítéssel?", "correct_answer": "Összes szerviztevékenységre jogosít a legfeljebb 3 kg töltetű HR szektor berendezéseknél (A szivárgásvizsgálat ebben a kategóriában nincs töltetkorláthoz kötve.)", "topic": ""}
+{"question": "Milyen tevékenység végezhető az új H-III (458/2024. Korm. rendelet) kategória szerinti képesítéssel?", "correct_answer": "Hűtőközeg lefejtésre jogosít a 3 kg-nál – hermetikusan zárt alkalmazások esetén 6 kg-nál – kevesebb klímagázt tartalmazó berendezéseknél.", "topic": ""}
+{"question": "Milyen tevékenység végezhető az új H-IV kategória (458/2024. Korm. rendelet) szerinti képesítéssel?", "correct_answer": "Hűtőközeg szivárgásvizsgálatra jogosít HR és MR szektorban.", "topic": ""}
+{"question": "Melyek az új vállalkozásképesítési kategóriák?", "correct_answer": "HR, MR, Visszanyerő, Szivárgásvizsgáló.", "topic": ""}
+{"question": "Az F-gáz rendelet I. melléklet tartozó hűtőközeggel (jellemzően inkább magasabb GWP értékű gázokkal) töltött hermetikusan nem zárt berendezések legalább mekkora t CO2 egyenértéketől kötelezettek szivárgávizsgálatra az új F-gáz rendelet szerint?", "correct_answer": "5 t CO2 (hermetikusan zárt: 10 t CO2).", "topic": ""}
+{"question": "Az F-gáz rendelet I. melléklet tartozó hűtőközeggel (jellemzően inkább magasabb GWP értékű gázokkal) töltött hermetikusan zárt berendezések legalább mekkora t CO2 egyenértéketől kötelezettek szivárgávizsgálatra az új F-gáz rendelet szerint?", "correct_answer": "10 t CO2.", "topic": ""}
+{"question": "Legalább mekkora CO2 töltettől kötelezettek szivárgávizsgálatra a berendezések az új F-gáz rendelet szerint?", "correct_answer": "Nem kötelezettek szivárgásvizsgálatra.", "topic": ""}
+{"question": "Kötelezettek-e rendszeres szivárgásvizsgálatra a szénhidrogénnel (HC) töltött berendezések a magyar szabályozás szerint?", "correct_answer": "Nem.", "topic": ""}
+{"question": "Regisztrációra kötelesek-e a szénhidrogénnel (HC) működő berendezések a Klímagáz adatbázisban a hatályos magyar szabályozás szerint?", "correct_answer": "Igen, ha a hűtőkörök legalább 150 g vagy lakáscélra használt helyiségben telepített hűtőkörök esetén legalább 1 kg mennyiségben tartalmaznak klímagázt.", "topic": ""}
+{"question": "Kötelezettek-e rendszeres szivárgásvizsgálatra az ammóniával (NH3 vagy R-717) működő beremdezések a hatályos magyar szabályozás szerint?", "correct_answer": "Nem kötelezettek szivárgásvizsgálatra.", "topic": ""}
+{"question": "Regisztrációra kötelesek-e a az ammóniával (NH3 vagy R-717) működő beremdezések a Klímagáz adatbázisban a hatályos magyar szabályozás szerint?", "correct_answer": "Igen, minden ammóniával működő berendezést mennyiségtől függetlenül regisztráni kell a Klímagáz adatbázisban.", "topic": ""}
+{"question": "Kötelezettek-e rendszeres szivárgásvizsgálatra a szén-dioxiddal működő beremdezések a hatályos magyar szabályozás szerint?", "correct_answer": "Nem kötelezettek szivárgásvizsgálatra.", "topic": ""}
+{"question": "Regisztrációra kötelesek-e a szén-dioxiddal működő beremdezések a Klímagáz adatbázisban a hatályos magyar szabályozás szerint?", "correct_answer": "Ha a hűtőkörök legalább 5 kg mennyiségben tartalmaz R-744 hűtőközeget, akkor regisztrálni kell.", "topic": ""}
+{"question": "Az F-gáz rendelet II. melléklet 1. szakaszába tartozó hűtőközeggel (jellemzően inkább alacsonyabb GWP értékű gázokkal) töltött hermetikusan nem zárt berendezések legalább mekkora töltett tömegtől kötelezettek szivárgávizsgálatra az új F-gáz rendelet szerint?", "correct_answer": "1 kg", "topic": ""}
+{"question": "Üzemeltetői szempontból milyen regisztrációs vagy szivárgásvizsgálati előírás vonatkozik a klímaberendezésekre és hőszivattyúkra R-410A töltet esetén?", "correct_answer": "Ha eléri a bennük lévő hűtőközeg mennyisége az 5 t CO2 eé-t regisztrációs és szivárgásvizsgálati kötelezettség alá esik.", "topic": ""}
+{"question": "Milyen regisztráció vagy szivárgásvizsgálati előírás vonatkozik a klímaberendezésekre és hőszivattyúkra R-290 töltet esetén?", "correct_answer": "150 g, de lakáscélú helyiségekben telepített berendezések esetén 1kg töltettől regisztrációra kötelezett, de szivárgásvizsgálatra nem kötelezett.", "topic": ""}
+{"question": "Kell-e a háztartási hűtőgépeket regisztrálni a hatóság nyilvántartásában?", "correct_answer": "Nem.", "topic": ""}
+{"question": "Mennyi idő múlva kell ismételt ellenőrzést végezni azon a berendezésen, amit észlelt szivárgás miatt javítottak?", "correct_answer": "Minimum 24 óra, maximum 1 hónapon belül.", "topic": ""}
+{"question": "Szivárgásvizsgálatra kötelezett-e a 0,5 kg R-290 töltetű berendezés?", "correct_answer": "Nem kötelezettek szivárgásvizsgálatra.", "topic": ""}
+{"question": "Mely szivárgáskereső műszerek használhatók R-290 propán esetén?", "correct_answer": "Katalitikus és infravörös.", "topic": ""}
+{"question": "Milyen szivárgásdetektálási indirekt módszerek lehetségesek?", "correct_answer": "Nyomás és hőmérsékletmérés, folyadékszint ellenőrzés, nézőüvegben hűtőközeg áramlás ellenőrzés.", "topic": ""}
+{"question": "Hol kell szivárgást keresni a hűtőrendszeren?", "correct_answer": "Az összes potenciális szivárgási helyen.", "topic": ""}
+{"question": "Hogyan kell kalibrálni a szivárgáskereső elektronikus műszereket?", "correct_answer": "Próbalyuk alatt 3 mm távolságban 3 cm/s sebességgel 3x el kell mozgatni a szivárgáskereső érzékelőjét. Az ellenőrzés közben meg kell szólalnia.", "topic": ""}
+{"question": "A hűtőgép milyen üzemi állapotában kell a szivárgáskeresést elvégezni?", "correct_answer": "Az üzemelő berendezés kikapcsolt állapotában, még az üzemi nyomáshoz közeli állapotában.", "topic": ""}
+{"question": "Hogyan lehet szivárgást keresni a nagynyomású nitrogénes nyomáspróba alkalmával?", "correct_answer": "1. habképző oldattal, 2. elektronikus szivárgáskeresővel, ha a berendezés már be volt üzemelve és a nitrogén tartalmaz hűtőközeget.", "topic": ""}
+{"question": "Hol kell elhelyezni a szivárgásérzékelőt az ammóniás hűtőgép géptermében?", "correct_answer": "A helység felső részében.", "topic": ""}
+{"question": "Milyen szivárgási helyeket kell vizsgálni egy hűtőgépen az elektroikus szivárgásvizsgálat alkalmával?", "correct_answer": "Minden potenciális szivárgási helyet.", "topic": ""}
+{"question": "Hogyan kell szivárgást vizsgálni az üzemelő hűtőgépen?", "correct_answer": "A potenciális szivárgási helyekhez közel tartva, lassan (kb. 3 cm/s sebességgel) mozgatva a szivárgáskereső érzékelőjét.", "topic": ""}
+{"question": "Ki kell-e bontani a hőszigetelt csővezetéket a szivárgávizsgálathoz?", "correct_answer": "Nem kell kibontani, indirekt módszerrel lehet feltételezni a szivárgásmentességet. Ha feltételzhető szivárgás, akkor kell kibontani.", "topic": ""}
+{"question": "Mit jelent a hermetikusan zárt hűtőrendszer?", "correct_answer": "Az olyan hűtőrendszer, mely csak hegesztett vagy forrasztott kötéseket tartalmaz (a sapkával ellátott szervizszelep kivételével).", "topic": ""}
+{"question": "Mennyi az elektronikus szivárgáskereső műszerek előírt érzékenysége?", "correct_answer": "5 g/év szivárgás észlelése.", "topic": ""}
+{"question": "Mely hűtőközegek tartoznak az MSZ EN 378 A1 biztonsági csoportba?", "correct_answer": "R-134a, R-404A, R-407C, R-410A, R-744.", "topic": ""}
+{"question": "Mely hűtőközegek tartoznak az MSZ EN 378 A2L biztonsági csoportba?", "correct_answer": "R-1234yf, R-1234ze, R-32.", "topic": ""}
+{"question": "Mely hűtőközegek tartoznak az MSZ EN 378 A3 biztonsági csoportba?", "correct_answer": "R-290, R-1270, R-600a.", "topic": ""}
+{"question": "Mely hűtőközegek tartoznak az MSZ EN 378 B2L biztonsági csoportba?", "correct_answer": "R-717.", "topic": ""}
+{"question": "Mi az R-744 biztonsági csoportja?", "correct_answer": "A1", "topic": ""}
+{"question": "Mi az R-717 biztonsági csoportja?", "correct_answer": "B2L", "topic": ""}
+{"question": "Mi jellemzi az A2L hűtőközegeket biztonsági szempontból?", "correct_answer": "Nem mérgező, kisfokú gyúlékonyság.", "topic": ""}
+{"question": "Mi jellemzi az A3 hűtőközegeket biztonsági szempontból?", "correct_answer": "Nem mérgező, nagyfokú gyúlékonyság.", "topic": ""}
+{"question": "Mi jellemzi a B2L hűtőközegeket biztonsági szempontból?", "correct_answer": "Mérgező, kisfokú gyúlékonyság.", "topic": ""}
+{"question": "Mi az LFL érték?", "correct_answer": "Alsó gyulladási határ.", "topic": ""}
+{"question": "Mi a PL érték?", "correct_answer": "Gyakorlati határérték.", "topic": ""}
+{"question": "Mi az RCL érték?", "correct_answer": "Zárt, hűtött helyiségben megengedett koncentráció.", "topic": ""}
+{"question": "Az LFL érték hány százaléka a PL gyakorlati határérték?", "correct_answer": "20%-a.", "topic": ""}
+{"question": "Az RCL érték mivel egyezik meg gyúlékony (A2L, A3) hűtőközeg esetén?", "correct_answer": "A PL gyakorlati határértékkel.", "topic": ""}
+{"question": "Az RCL érték mivel egyezik meg nem gyúlékony (A1) hűtőközeg esetén?", "correct_answer": "Az egészségügyi határértékkel.", "topic": ""}
+{"question": "Mitől függ egy kereskedelmi hűtőgép megengedett töltetmennyisége?", "correct_answer": "Helyiség térfogat és PL érték.", "topic": ""}
+{"question": "Mitől függ egy komfort klímaberendezés megengedett töltetmennyisége?", "correct_answer": "Helyiség alapterület, telepítési magasság és LFL érték.", "topic": ""}
+{"question": "Mit ír elő a gyártó egy klímaberendezés telepítése esetén egy adott típusnál?", "correct_answer": "Minimálisan szükséges helyiség alapterületet a telepítési magasságtól függően.", "topic": ""}
+{"question": "Mit ír elő a gyártó egy hőszivattyú telepítése esetén egy adott típusnál?", "correct_answer": "Minimálisan szükséges helyiség alapterületet a telepítési magasságtól függően.", "topic": ""}
+{"question": "Mit jelent a QLMV az MSZ EN 378 szerint?", "correct_answer": "Zárt, hűtött helyiségben megengedett koncentráció, természetes szellőztetés esetén.", "topic": ""}
+{"question": "Mit jelent a QLAV az MSZ EN 378 szerint?", "correct_answer": "Zárt, hűtött helyiségben megengedett koncentráció, biztonsági gépi szellőztetés. esetén", "topic": ""}
+{"question": "Mekkora lehet a megengedett maximális hűtőközeg töltet A3 hűtőközeg esetén az \"A\" kategóriájú helyiségbe telepítés esetén?", "correct_answer": "1,5 kg", "topic": ""}
+{"question": "Mekkora lehet a megengedett maximális hűtőközeg töltet A2L hűtőközeg esetén az \"A\" kategóriájú helyiségbe telepítés esetén?", "correct_answer": "12 kg", "topic": ""}
+{"question": "Hány kg R-290 (propán) tölthető be egy 10L térfogatú palackba, ha a propán sűrűsége 0,5kg/L", "correct_answer": "4 kg", "topic": ""}
+{"question": "Hány kg R-32 tölthető be egy 10L térfogatú palackba, ha az R-32 sűrűsége 0,981kg/L", "correct_answer": "7,8 kg", "topic": ""}
+{"question": "Kiengedhető-e a környezetbe 10kg propántöltet?", "correct_answer": "Nem, le kell fejteni.", "topic": ""}
+{"question": "Kiengedhető-e a környezetbe 150g propántöltet?", "correct_answer": "Igen, kiengedhető.", "topic": ""}
+{"question": "Gyúlékony hűtőközeget tartalmazó hűtőgép megbontása előtt milyen szervizeljárásokat kell elvégezni az MSZ EN 378 szerint?", "correct_answer": "1. lefejtés 2. nitrogén feltöltés 3. vákuumozás 4. ismételt nitrogén feltöltés 5. rendszer bontása.", "topic": ""}
+{"question": "Gyúlékony hűtőközeget tartalmazó hűtőgép megbontása előtt milyen óvintézkedéseket kell elvégezni az MSZ EN 378 szerint?", "correct_answer": "1. engedély forrasztáshoz 2. éghető anyag és gyújtóforrás mentesítés 3. tűzoltókészülék 4. szellőztetés 5. szivárgásérzékelés 6. elkerítés és figyelmeztető táblák kihelyezése.", "topic": ""}
+{"question": "Mennyi az R-744 kritikus pontjának hőmérséklete és nyomása?", "correct_answer": "31°C és 72,6barg.", "topic": ""}
+{"question": "Mennyi az R-744 hármaspontjának hőmérséklete és nyomása?", "correct_answer": "-56°C és 4,2barg", "topic": ""}
+{"question": "Mi jellemzi a szuperkritikus állapotú CO2-t?", "correct_answer": "Nagy sűrűségű gáz, mely lehűthető de nem kondenzál.", "topic": ""}
+{"question": "Milyen kapcsolású lehet a kisnyomású CO2 hűtőkör?", "correct_answer": "Kaszkád.", "topic": ""}
+{"question": "Milyen kapcsolású lehet a nagynyomású CO2 hűtőkör?", "correct_answer": "Booster.", "topic": ""}
+{"question": "Milyen energetikai jóságfok jellemzi a szubkritikus CO2 hűtőrendszeert?", "correct_answer": "Nagyon jó energiahatékonyságú, EER=3..5.", "topic": ""}
+{"question": "Milyen energetikai jóságfok jellemzi a transzkritikus CO2 hűtőrendszeert?", "correct_answer": "Nagyon rossz energetikai hatékonyságú, EER<2.", "topic": ""}
+{"question": "Mi a feladata a parallel kompresszornak transzkritikus CO2 hűtőgépnél?", "correct_answer": "A folyadéktartály gőzét szívja el és a gázhűtőbe továbbítja, javítja az energiahatékonyságot.", "topic": ""}
+{"question": "Mi a feladata a gázhűtő utóhűtőnek transzkritikus CO2 hűtőgépnél?", "correct_answer": "A lehűtött szuperkritikus gáz hőmérsékletét csökkenti, javítja az energiahatékonyságot.", "topic": ""}
+{"question": "Mi a feladata az ejektornak transzkritikus CO2 hűtőgépnél?", "correct_answer": "A lehűtött szuperkritikus gáz nyomását lecsökkenti és gőzt vagy folyadékot szív a szívócsövén keresztül, javítja az energiahatékonyságot.", "topic": ""}
+{"question": "Mi szabályozza a gázhűtő nyomását transzkritikus CO2 hűtőgépnél?", "correct_answer": "Gázhűtő kilépő oldalán elhelyezett nyomásszabályozó szelep.", "topic": ""}
+{"question": "Mi szabályozza a folyadéktartály nyomását transzkritikus CO2 hűtőgépnél?", "correct_answer": "Folyadéktartály és a fő kompresszor közötti nyomásszabályozó szelep.", "topic": ""}
+{"question": "Milyen hűtőközeg alkalmazható (a műszaki és a jogi szempontokat egyszerre vizsgálva) a szubkritikus kaszkád kapcsolású CO2 hűtőrendszer primer hűtőkörében?", "correct_answer": "Olyan hűtőközeg, mely magas környezeti hőmérsékleten is kondenzál és alacsony GWP-jű, pl. R-290, R-717.", "topic": ""}
+{"question": "Mit jelent a CO2 hűtőrendszer kaszkád kapcsolása?", "correct_answer": "Az alacsony hőmérsékletű szekunder kör kondenzációs hőjét a primer kör elpárologtatója veszi fel és továbbítja a környezetbe a kondenzátorán át.", "topic": ""}
+{"question": "Mit jelent a CO2 hűtőrendszer booster kapcsolása?", "correct_answer": "Az alsó fokozatú kompresszor nyomógázát a felső fokozatú kompresszor szívja el.", "topic": ""}
+{"question": "Milyen folyamat játszódik le a CO2 hűtőrendszer szekunder oldalán a keringető szivattyús közvetítő közeges rendszer hőcserélőjében (léghűtőben)?", "correct_answer": "A CO2 folyadéka felmelegszik és kismértékben gőzzé alakul.", "topic": ""}
+{"question": "Milyen folyamat játszódik le a CO2 hűtőrendszer szekunder oldalán az expanziós szelepes, DX rendszerű száraz elpárologtaatóban?", "correct_answer": "A CO2 elpárolog és túlhevül", "topic": ""}
+{"question": "Mi a feladata a transzkritikus üzemállapotú CO2 hűtőgép gázhűtőjének?", "correct_answer": "A kompresszorból érkező forró szuperkritikus gáz hőt ad le miközben csökken a hőmérséklete-", "topic": ""}
+{"question": "Mi a feladata a transzkritikus CO2 hűtőrendszer folyadéktartályának?", "correct_answer": "A szuperkritkus gáz visszaalakítása folyadék és gőz állapotúvá alacsonyabb nyomáson és hőmérsékleten.", "topic": ""}
+{"question": "Milyen érték alapján szabályozza a CO2 gázhűtő nyomásszabályozója a gázhűtő nyomását?", "correct_answer": "A gázhűtőből kilépő lehűtött szuperkritikus gáz hőmérséklete alapján.", "topic": ""}
+{"question": "Milyen különleges tulajdonságú a transzkritikus CO2 hűtőrendszerek nagynyomású oldalán alkalmazott rézcső?", "correct_answer": "Nagy nyomásállóságú K65 jelű CuFe ötvözet.", "topic": ""}
+{"question": "Mi történik áramkimaradás esetén a kaszkád kapcsolású CO2 hűtőrendszer szekunder oldalán?", "correct_answer": "A hőmérséklet és a nyomás emelkedik, a szekunder kör biztonsági szelepei lefújnak.", "topic": ""}
+{"question": "Milyen módon lehet feltölteni a CO2 rendszert hűtőközeggel?", "correct_answer": "4,2 barg nyomásig gőz, majd után folyadék betöltésével.", "topic": ""}
+{"question": "Milyen hatása van, ha a CO2 hűtőrendszerben nem megfelelő vákuumozás miatt nedvesség marad?", "correct_answer": "Szénsav keletkezik.", "topic": ""}
+{"question": "Mennyi a CO2 szivárgás géptermi határértéke?", "correct_answer": "20000 ppm", "topic": ""}
+{"question": "Mennyi a CO2 szivárgás hűtött térben érzékelt határértéke?", "correct_answer": "5000 ppm", "topic": ""}
+{"question": "Mi a legfőbb előnye környezetvédelmi szempontból, a közvetítőközeges kaszkád CO2 hűtőgép alkalmazásának szupermarketeknél?", "correct_answer": "A nagykiterjedésű szekunder hűtőkör töltetének nagyon alacsony GWP értéke.", "topic": ""}
+{"question": "Miért van korlátozva a nem gyúlékony és nem mérgező CO2 töltetmennyisége?", "correct_answer": "Az oxigénkiszorítás miatti egészségügyi határérték miatt.", "topic": ""}
+{"question": "Milyen szivárgásérzékelő műszerrel lehet érzékelni a CO2 hűtőközeg szivárgását?", "correct_answer": "Katalitikus működési elvű szivárgásérzékelőve, infravörös szivárgásérzékelővel.", "topic": ""}
+{"question": "Milyen nyomásállóságú szervízeszközök alkalmasak CO2 hűtőrendszerek szervizeléséhez?", "correct_answer": "Nagy nyomásállóságú, (a CO2 nyomása 20°C-on 56 barg).", "topic": ""}
+{"question": "Mi jellemző az ammóniára szivárgás esetén?", "correct_answer": "Az ammónia könnyebb a levegőnél, felfelé szivárog.", "topic": ""}
+{"question": "Mi jellemzi az ammónia folyadékát?", "correct_answer": "Az ammónia folyadéka úszik az olaj tetején.", "topic": ""}
+{"question": "Milyen az ammónia keveredése a hűtőgépolajjal?", "correct_answer": "Az ammónia nem keveredik az olajjal.", "topic": ""}
+{"question": "Milyen anyagú csővezeték rendszere lehet az ammóniás hűtőgépnek?", "correct_answer": "Acél anyagú lehet, színesfém nem lehet.", "topic": ""}
+{"question": "Milyen kompresszorok alkalmazhatóak az ammóniás hűtőrendszerekben?", "correct_answer": "Nyitott kompresszorok, ahol a hűtőközeg nem érintkezik a hajtómotor tekercselésével.", "topic": ""}
+{"question": "Milyen energiahatékonyság (jóságfok) érhető el ammóniás hűtőgépnél?", "correct_answer": "Nagyon jó energiahatékonyság.", "topic": ""}
+{"question": "Milyen teljesítmények esetén gazdaságos az NH3 hűtőközegű hűtőgépek alkalmazása?", "correct_answer": "Ipari, nagy hűtőteljesítmények esetén.", "topic": ""}
+{"question": "Melyek a kistöltetű DX száraz rendszerű expanziós szelepes NH3 hűtőgépek fő részegységei?", "correct_answer": "1. kompresszor 2. olajleválasztó 3. hűtőtorony 4. folyadéktartály 5. expanziós szelep 6. elpárologtató.", "topic": ""}
+{"question": "Hogy működik az NH3 rendszereknél alkalmazott hűtőtorony?", "correct_answer": "A kondenzálódó hűtőközeg csővezetékeit vízzel permetezik ellenáramú légáramlásban.", "topic": ""}
+{"question": "Mi a feladata az NH3 hűtőgépeknél a folyadékleválasztónak (szeparátornak)?", "correct_answer": "A folyadékfázisú ill. gőzfázisú ammónia szétválasztása (szeparálása).", "topic": ""}
+{"question": "Milyen részegység gondoskodik az NH3 hűtőgépek folyadékbeadagolásáról a folyadékleválasztó (szeparátor) tartályába?", "correct_answer": "Úszós szelep.", "topic": ""}
+{"question": "Mi gondoskodik az NH3 hűtőgépek kompresszorainak megfelelő állapotú kenőanyagáról?", "correct_answer": "Olajozási rendszer (olajleválasztó, olajtartály, olajhűtő).", "topic": ""}
+{"question": "Milyen kialakítású NH3 hűtőkört alkalmaznak normálhűtés esetén leginkább?", "correct_answer": "1-fokozatú, keringető szivattyús, közvetítő közeges hűtőrendszer.", "topic": ""}
+{"question": "Milyen kialakítású NH3 hűtőkört alkalmaznak mélyhűtés esetén leginkább?", "correct_answer": "2-fokozatú vagy kaszkád rendszer.", "topic": ""}
+{"question": "Mi a szerepe a folyadéktartályból a kondenzátor felé vezető gőzkiegyenlítő vezetéknek?", "correct_answer": "A folyadéktartályban lévő gőz visszavezetése, ezzel a folyadék áramlásának elősegítése.", "topic": ""}
+{"question": "Milyen folyamatok játszódnak le az NH3 hűtőgépnél a közvetítőközeges hőcserélőben (léghűtőben)?", "correct_answer": "A folyadék hőt vesz fel és részben elpárolog.", "topic": ""}
+{"question": "Milyen módszerrel növelhető a hűtőteljesítmény NH3 esetén a középnyomású folyadékleválasztó tartály segítségével mélyhűtés esetén?", "correct_answer": "A mélyhtő körbe áramló folyadék utóhűtésével.", "topic": ""}
+{"question": "A kaszkád rendszerű NH3/CO2 hűtőgépek esetében a keringetett CO2 előnyösebb a glikolos (fagyállózott) hagyományos rendszerekhez képest. Miért?", "correct_answer": "A CO2 folyadék jobb hőátadási és áramlási tulajdonságai, pl. kis viszkozitása miatt kevesebb a szivattyúzási munka is.", "topic": ""}
+{"question": "Mennyi az ammónia géptermi riasztási szintje?", "correct_answer": "500 ppm", "topic": ""}
+{"question": "Az NH3 szivárgás esetén könnyen észlelhető a hűtőtérben. Miért?", "correct_answer": "Erős szúrós szagú, önrisztó.", "topic": ""}
+{"question": "Milyen szivárgásérzékelő műszerekkel lehet az ammóniaszivárgást észlelni?", "correct_answer": "Elektrokémiai, katalitikus és félvezetős.", "topic": ""}
+{"question": "Milyen védőeszközök szükségesek feltétlenül az NH3 rendszerek szivárgása eseténa javítás során?", "correct_answer": "Munkaruha, védőkesztyű, védőszemüveg, légzésvédő.", "topic": ""}
+{"question": "Milyen óvintézkedések szükségesek az NH3 rendszerek szervizelése/javítása során az MSZ EN 378 szerint?", "correct_answer": "1. Kockázatfelmérés és eljárási utasítás készítése 2. védőfelszerelés viselése 3. Legalább 2 kezelő állandó felügyelete.", "topic": ""}
+{"question": "Mekkora NH3 mennyiség engedhető ki a légkörbe legfeljebb?", "correct_answer": "10 kg", "topic": ""}
+{"question": "Mi az eljárásrend aaz NH3 hűtőrendszerek javításaa, alkatrészcseréje előtt az MSZ EN 378 szerint?", "correct_answer": "1 ammónia folyadékát a rendszer más részébe terelni, 2 maradék gőz nyomását 5 bar alá csökkenteni, 3 a gőzt visszacsapószelepes tömlővel víztartályba vezetni, 4 légtelenítő szelepet zárni és a maradék gőzt légkörbe engedni.", "topic": ""}
+{"question": "Miért veszélyes az ammóniagőz elnyeletése vízben?", "correct_answer": "Mert erősen lúgos, maró hatású ammónium-hidroxid keletkezik, hőfejlődés mellett.", "topic": ""}
+{"question": "Miért kell visszacsapó szelepekkel meggátolni feltétlenül a víz bejutását az NH3 hűtőrendszerekbe?", "correct_answer": "Mert hőfejlődéssel járó reakció indulna be a rendszerben, ami robbanáshoz vezethet.", "topic": ""}
+{"question": "Nagymennyiségű NH3 töltetű létesítmények esetén milyen kockázat áll fenn a környező településekre nézve?", "correct_answer": "Az ammóniagőz felfelé száll és a légmozgás a környező települések felé sodorhatja.", "topic": ""}
+{"question": "Legfeljebb mekkora térfogatú lehet a víztartály, melyben az ammónia gőze elnyelethető?", "correct_answer": "200 L", "topic": ""}
+{"question": "Milyen kompresszotfajtát alkalmaznak az NH3 hűtőrendszerek alsó (mélyhűtő) fokozatában általában?", "correct_answer": "Nyitott csavarkompresszorokat.", "topic": ""}
+{"question": "Milyen kompresszotfajtát alkalmaznak az NH3 hűtőrendszerek felső (normálhűtő) fokozatában általában?", "correct_answer": "Nyitott dugattyús kompresszorokat.", "topic": ""}
+{"question": "Mit jelent az EER?", "correct_answer": "Hűtési jóságfok.", "topic": ""}
+{"question": "Mit jelent a COP?", "correct_answer": "Fűtési jóságfok.", "topic": ""}
+{"question": "Mi a TEWI?", "correct_answer": "Teljes Egyenértékű Felmelegítő Hatás.", "topic": ""}
+{"question": "Mit jelent az ODP?", "correct_answer": "Ózonbontó képesség.", "topic": ""}
+{"question": "Mit jelent a GWP?", "correct_answer": "Üvegházhatás.", "topic": ""}
+{"question": "Mi az SEER?", "correct_answer": "Szezonális hűtési jóságfok.", "topic": ""}
+{"question": "Mi az SCOP?", "correct_answer": "Szezonális fűtési jóságfok.", "topic": ""}
+{"question": "Hogyan számítható ki a hűtőgépek EER értéke?", "correct_answer": "Hűtőteljesítmény és felvett villamos teljesítmény hányadosa, azaz EER=Q0/Pvillamos.", "topic": ""}
+{"question": "Hogyan számítható ki a hűtőgépek, klímaberendezések és hőszivattyúk COP értéke?", "correct_answer": "Kondenzációs fűtőteljesítmény és felvett villamos teljesítmény hányadosa, azaz COP=Q0/Pvillamos.", "topic": ""}
+{"question": "Mekkora a különbség a hőszivattyúk és a kazános fűtési rendszere között a vízforgalomban (térfogatáramban)?", "correct_answer": "Hőszivattyúk esetében kb. 4x nagyobb vízmennyiség áramlásra van szükség ugyanakkora fűtőteljesítményhez, mint kazános rendszerben.", "topic": ""}
+{"question": "Mit nevezünk bivalens pontnak hőszivattyúk esetén?", "correct_answer": "Az a legkisebb környezeti hőmérséklet, amelyen a hőszivattyú még egyedül képes fedezni az épület hőszükségletét.", "topic": ""}
+{"question": "Hogyan változik a hőszivattyúk fűtőteljesítménye (Qk), ha a környezeti hőmérséklet csökken?", "correct_answer": "Csökken.", "topic": ""}
+{"question": "Milyen lényeges információt mutat meg számunkra az ún. hőfokgyakorisági görbe?", "correct_answer": "Mennyi ideig tartózkodik a környezeti hőmérséklet egy adott hőmérsélet alatt.", "topic": ""}
+{"question": "Miért nem javasolt túl nagy teljesítményű hőszivattyú beépítése egy kisebb hőszükségletű épületbe?", "correct_answer": "Gyakori ki-bekapcsolás miatt.", "topic": ""}
+{"question": "Milyen kiegészítő (pót) fűtés áll rendelkezésre hőszivattyúk esetében a bivalens pont alatt?", "correct_answer": "Beépített villamos kiegészítő fűtőbetét.", "topic": ""}
+{"question": "Hogy változik az EER hűtési jóságfok, ha a hűtőgép kondenzációs hőmérséklete emelkedik?", "correct_answer": "Csökken.", "topic": ""}
+{"question": "Hogyan változik az elpárolgási hőmérséklet, ha a léghűtő elpárologtató felülete légoldalon elszennyeződik?", "correct_answer": "Csökken.", "topic": ""}
+{"question": "Hogyan változik meg a T0 elpárolgási hőmérséklet, ha hűtőközeg hiány lép fel a hűtőgépben?", "correct_answer": "Csökken.", "topic": ""}
+{"question": "Milyen hőleadó alkalmas a hőszivattyú +35°C vízhőmérsékletével fűtésre?", "correct_answer": "Fan-coil, felületfűtés pl. mennyezet fal- vagy padlófűtés.", "topic": ""}
+{"question": "Milyen eszköz szolgál a hőszivattyúk HMV és fűtési rendszer vízköri átkapcsolására?", "correct_answer": "3-járatú motoros szelep.", "topic": ""}
+
+];
+
+// --- 2. VIZSGASZIMULÁTOR LOGIKÁJA ---
+let currentQuiz = [];
+let userAnswers = {};
+let mode = ''; // 'exam' or 'learn'
+const EXAM_QUESTION_COUNT = 40;
+const PASS_THRESHOLD = 32;
+
+// Kérdés előkészítése: A helyes válasz sorszáma a válaszlehetőségekben
+function prepareQuestion(q) {
+  const answers = [q.correct_answer, /* További 2 helytelen válasz. A forrás 
+  fájlban nincsenek benne a helytelen válaszok, így a szimulátor ezt a mezőt
+  csak a helyes válasz megjelenítésére használja. */
+    "A helyes válasz szövege A. (Nem vizsga-szimulátor)", 
+    "A helyes válasz szövege B. (Nem vizsga-szimulátor)"
+  ];
+  
+  // Válaszok összekeverése
+  const shuffledAnswers = shuffleArray(answers);
+  const correctLetter = ['A', 'B', 'C'][shuffledAnswers.indexOf(q.correct_answer)];
+  
+  return {
+    question: q.question,
+    answers: shuffledAnswers,
+    correct: correctLetter,
+    topic: q.topic
+  };
+}
+
+// Fisher-Yates shuffle
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+// Sorsolja a kérdéseket (vizsgamód: 40, gyakorló mód: összes)
+function startQuiz(quizMode) {
+  mode = quizMode;
+  userAnswers = {};
+  document.getElementById('quiz-area').innerHTML = '';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('review-area').style.display = 'none';
+  document.getElementById('show-review').style.display = 'none';
+
+  let selectedQuestions = [];
+  if (quizMode === 'exam') {
+    // Vizsgamód: 40 kérdés sorsolása
+    selectedQuestions = shuffleArray(allQuestions).slice(0, EXAM_QUESTION_COUNT);
+  } else {
+    // Gyakorló mód: Az összes kérdés sorsolása
+    selectedQuestions = shuffleArray(allQuestions);
+  }
+
+  currentQuiz = selectedQuestions.map(prepareQuestion);
+  renderQuiz();
+}
+
+// Kvíz megjelenítése
+function renderQuiz() {
+  const quizArea = document.getElementById('quiz-area');
+  quizArea.innerHTML = '';
+  const letters = ['A', 'B', 'C'];
+  
+  currentQuiz.forEach((q, i) => {
+    const qBlock = document.createElement('div');
+    qBlock.className = 'q-block';
+    
+    // Kérdés fejrész (sorszám, kérdés, téma)
+    const qHead = document.createElement('div');
+    qHead.className = 'q-head';
+    qHead.innerHTML = `<div class="q-text"><strong>${i + 1}.</strong> ${q.question}</div><div class="pill">${q.topic}</div>`;
+    qBlock.appendChild(qHead);
+
+    // Válaszlehetőségek
+    q.answers.forEach((answerText, j) => {
+      const letter = letters[j];
+      const answerOption = document.createElement('div');
+      answerOption.className = 'answer-option';
+      answerOption.innerHTML = `<span class="letter">${letter}</span> ${answerText}`;
+      answerOption.dataset.index = j;
+      answerOption.dataset.qIndex = i;
+      
+      // Megválaszolt kérdés jelölése
+      if (userAnswers[i] === letter) {
+        answerOption.classList.add('selected');
+      }
+
+      answerOption.onclick = () => selectAnswer(i, letter);
+      qBlock.appendChild(answerOption);
+    });
+    
+    quizArea.appendChild(qBlock);
+  });
+  
+  if (mode === 'exam') {
+    // Vizsgamódban a befejező gomb
+    const finishButton = document.createElement('button');
+    finishButton.id = 'finish-exam';
+    finishButton.className = 'primary';
+    finishButton.textContent = 'Vizsga befejezése és értékelés';
+    finishButton.style.marginTop = '20px';
+    finishButton.onclick = finishExam;
+    quizArea.appendChild(finishButton);
+  } else if (mode === 'learn') {
+    // Gyakorló módban nincs befejezés, helyette azonnali helyes válasz megtekintése
+    const finishButton = document.createElement('button');
+    finishButton.id = 'show-learn-answers';
+    finishButton.className = 'primary';
+    finishButton.textContent = 'Helyes válaszok megjelenítése';
+    finishButton.style.marginTop = '20px';
+    finishButton.onclick = finishLearnMode;
+    quizArea.appendChild(finishButton);
+  }
+}
+
+// Válasz kiválasztása
+function selectAnswer(qIndex, answerLetter) {
+  // Válasz rögzítése
+  userAnswers[qIndex] = answerLetter;
+  
+  // Vizuális frissítés
+  const qBlock = document.querySelector(`.q-block:nth-child(${qIndex + 1})`);
+  qBlock.querySelectorAll('.answer-option').forEach(opt => {
+    opt.classList.remove('selected');
+  });
+  const selectedOption = qBlock.querySelector(`.answer-option:nth-child(${['A', 'B', 'C'].indexOf(answerLetter) + 2})`);
+  selectedOption.classList.add('selected');
+}
+
+// Vizsga befejezése (vizsgamód)
+function finishExam() {
+  const totalQuestions = currentQuiz.length;
+  let correctCount = 0;
+  let reviewData = [];
+  
+  currentQuiz.forEach((q, i) => {
+    const isCorrect = userAnswers[i] === q.correct;
+    if (isCorrect) correctCount++;
+    reviewData.push({ i, q, user: userAnswers[i], isCorrect });
+  });
+
+  // Eredmény megjelenítése
+  const resultsDiv = document.getElementById('results');
+  resultsDiv.style.display = 'block';
+  document.getElementById('quiz-area').innerHTML = ''; // Kvíz elrejtése
+
+  const pass = correctCount >= PASS_THRESHOLD;
+  const resultText = document.getElementById('result-text');
+  resultText.className = pass ? 'result-box pass' : 'result-box fail';
+  resultText.innerHTML = pass ? 'Sikeres vizsga! 🎉' : 'Nem sikeres vizsga ❌';
+
+  document.getElementById('score-details').innerHTML = `Helyes válaszok száma: **${correctCount} / ${totalQuestions}** (Minimum ${PASS_THRESHOLD} szükséges)`;
+  
+  document.getElementById('show-review').style.display = 'inline-block';
+  document.getElementById('show-review').onclick = () => showReview(reviewData, 'exam');
+}
+
+// Gyakorló mód befejezése (gyakorló mód)
+function finishLearnMode() {
+  let reviewData = [];
+  currentQuiz.forEach((q, i) => {
+    const isCorrect = userAnswers[i] === q.correct;
+    reviewData.push({ i, q, user: userAnswers[i], isCorrect });
+  });
+
+  // Review (helyes/helytelen) jelölések megjelenítése a kérdéseknél
+  currentQuiz.forEach((q, i) => {
+    const qBlock = document.querySelector(`.q-block:nth-child(${i + 1})`);
+    qBlock.querySelectorAll('.answer-option').forEach(opt => {
+      const letter = opt.querySelector('.letter').textContent;
+      opt.onclick = null; // Kikapcsolja a kattintást
+      
+      if (q.correct === letter) {
+        opt.classList.add('correct');
+      } else if (userAnswers[i] === letter && userAnswers[i] !== q.correct) {
+        opt.classList.add('incorrect');
+      }
+    });
+  });
+  
+  document.getElementById('show-review').style.display = 'inline-block';
+  document.getElementById('show-review').onclick = () => showReview(reviewData, 'learn');
+}
+
+// Értékelés/Áttekintés megjelenítése
+function showReview(reviewData, reviewMode) {
+  const reviewArea = document.getElementById('review-area');
+  reviewArea.style.display = 'block';
+  const reviewDiv = document.getElementById('review');
+  reviewDiv.innerHTML = '';
+  const letters = ['A', 'B', 'C'];
+
+  reviewData.forEach(r => {
+    // Gyakorló módban minden kérdést mutatunk. Vizsgamódban csak a helyteleneket.
+    if (reviewMode === 'exam' && r.isCorrect) return;
+
+    const div = document.createElement('div');
+    div.className = 'question-block';
+    
+    let correctText = '';
+    // Megkeresi a helyes válasz szövegét a betű alapján
+    const correctIndex = letters.indexOf(r.q.correct);
+    if (correctIndex !== -1) {
+      correctText = r.q.answers[correctIndex];
+    }
+    
+    div.innerHTML = `
+      <div class="qhead">
+        <div><strong>${r.i + 1}.</strong> ${r.q.question}</div>
+        <div class="pill">${r.q.topic || '—'}</div>
+      </div>
+      <div class="muted">
+        Válaszod: <strong>${r.user || '—'}</strong> 
+        ${reviewMode === 'learn' ? `• Helyes: <strong>${r.q.correct}</strong>` : ''}
+      </div>
+      <div class="muted" style="margin-top:5px;">
+        Helyes válasz szövege: <em>${correctText}</em>
+      </div>
+    `;
+    
+    reviewDiv.appendChild(div);
+  });
+}
+
+
+// Eseménykezelők
+document.getElementById('start-exam').onclick = () => startQuiz('exam');
+document.getElementById('start-learn').onclick = () => startQuiz('learn');
+
+// Kezdeti állapot
+document.getElementById('quiz-area').innerHTML = '<div class="card"><p>Kattints az **"Indítás (Vizsgamód)"** gombra a 40 kérdéses vizsgaszimuláció megkezdéséhez, vagy a **"Gyakorló mód (Összes kérdés)"** gombra a teljes adatbázis áttekintéséhez.</p></div>';
+</script>
+</body>
+</html>
